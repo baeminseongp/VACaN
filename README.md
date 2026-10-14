@@ -63,6 +63,9 @@ Step 5 linked-view dashboard and privacy-preserving export decisions are
 documented in [`docs/visualization/step5.md`](docs/visualization/step5.md).
 Step 6 CAVIAR real-video projection and zone-count validation decisions are
 documented in [`docs/evaluation/step6.md`](docs/evaluation/step6.md).
+Step 7 keeps JRDB mobile sensing and Mall dense-crowd/VLM evaluation independent;
+its contracts and licensed-data boundary are documented in
+[`docs/evaluation/step7.md`](docs/evaluation/step7.md).
 The early ATC system evaluation has been reclassified as a Step 8 foundation
 in [`docs/evaluation/step8-foundation.md`](docs/evaluation/step8-foundation.md).
 

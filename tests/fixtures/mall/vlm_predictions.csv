@@ -1,0 +1,5 @@
+frame_id,predicted_count,predicted_level,description,grounded_evidence
+1,4,LOW,Sparse pedestrian flow,Four visible heads with clear spacing
+2,5,MEDIUM,Moderate crowd,Five visible heads across the corridor
+3,8,HIGH,Dense pedestrian grouping,Eight visible heads with reduced spacing
+4,7,MEDIUM,Moderate crowd,Seven visible heads distributed across the frame

@@ -1,0 +1,15 @@
+{
+  "labels": {
+    "000000.jpg": [
+      {"label_id": "pedestrian:10", "box": {"cx": 80, "cy": 100, "w": 40, "h": 130}, "attributes": {"occlusion": 0}}
+    ],
+    "000001.jpg": [
+      {"label_id": "pedestrian:10", "box": {"cx": 100, "cy": 100, "w": 40, "h": 130}, "attributes": {"occlusion": 0}},
+      {"label_id": "pedestrian:11", "box": {"cx": 480, "cy": 105, "w": 70, "h": 145}, "attributes": {"occlusion": 2}}
+    ],
+    "000002.jpg": [
+      {"label_id": "pedestrian:11", "box": {"cx": 520, "cy": 105, "w": 70, "h": 145}, "attributes": {"occlusion": 1}},
+      {"label_id": "pedestrian:12", "box": {"cx": 820, "cy": 115, "w": 55, "h": 150}, "attributes": {"occlusion": 0}}
+    ]
+  }
+}

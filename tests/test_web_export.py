@@ -30,7 +30,10 @@ class WebExportTest(unittest.TestCase):
 
     def test_bundle_excludes_individual_trajectory_fields(self):
         serialized = json.dumps(self.payload).lower()
-        for forbidden in ("person_id", "track_id", "trajectory_id", "position_x", "position_y"):
+        for forbidden in (
+            "person_id", "track_id", "label_id", "trajectory_id", "position_x",
+            "position_y", "head_points", "grounded_evidence",
+        ):
             self.assertNotIn(forbidden, serialized)
 
     def test_each_planning_pair_has_two_strategies(self):

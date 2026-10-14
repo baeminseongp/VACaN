@@ -1,0 +1,23 @@
+{
+  "dataset_id": "jrdb-step7-fixture-v1",
+  "license": "Synthetic fixture shaped like JRDB labels_2d; no JRDB media redistributed",
+  "panorama_width_px": 1000,
+  "sequences": [
+    {
+      "sequence_id": "fixture-stationary",
+      "sensor_motion": "STATIONARY",
+      "annotations": "../../tests/fixtures/jrdb/stationary_labels.json"
+    },
+    {
+      "sequence_id": "fixture-dynamic",
+      "sensor_motion": "DYNAMIC",
+      "annotations": "../../tests/fixtures/jrdb/dynamic_labels.json"
+    }
+  ],
+  "output_directory": "../../data/processed/jrdb/step7-fixture",
+  "limitations": [
+    "The fixture validates parsing and metric semantics only; it is not a JRDB benchmark result.",
+    "Panorama occupancy is an image-space observation-yield proxy, not metric floor coverage.",
+    "Stationary and dynamic sequence summaries are descriptive and are not paired causal estimates."
+  ]
+}

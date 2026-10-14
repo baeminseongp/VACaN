@@ -1,0 +1,19 @@
+{
+  "dataset_id": "jrdb-2022-mobile-sensing-v1",
+  "source_url": "https://jrdb.erc.monash.edu/",
+  "license": "CC BY-NC-SA 3.0; access requires JRDB account approval",
+  "panorama_width_px": 3760,
+  "sequences": [
+    {
+      "sequence_id": "REPLACE_WITH_SEQUENCE_ID",
+      "sensor_motion": "UNKNOWN",
+      "annotations": "/media/engineer/DATA1/datasets/JRDB/labels/labels_2d/REPLACE_WITH_SEQUENCE.json"
+    }
+  ],
+  "output_directory": "/home/engineer/VACaN/data/processed/jrdb/mobile-sensing",
+  "limitations": [
+    "Set sensor_motion from sequence metadata before comparing stationary and dynamic subsets.",
+    "Image-space occupancy is not metric floor coverage and must not be plotted on the ATC map.",
+    "JRDB and ATC results are independent evaluations from different venues."
+  ]
+}

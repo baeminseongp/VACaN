@@ -28,3 +28,11 @@ The canonical states are:
 Congestion level is one of `LOW`, `MEDIUM`, `HIGH`, or `UNKNOWN`. Thresholds
 belong to the scenario configuration so analysts can change them without
 discarding continuous density.
+
+## Step 7 independent evaluation contracts
+
+JRDB `frame_metrics.csv` records robot-view observation yield and occlusion;
+`track_continuity.csv` records temporal persistence. Mall `frame_metrics.csv`
+records paired image-level count and congestion-class errors. These tables are
+dataset-scoped evaluation products, not canonical ATC scene state, and must not
+be joined spatially across venues.

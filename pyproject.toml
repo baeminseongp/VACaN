@@ -13,6 +13,9 @@ authors = [{ name = "VACaN research team" }]
 dependencies = []
 
 [project.optional-dependencies]
+mall = ["scipy>=1.11"]
+
+[project.optional-dependencies]
 dev = [
   "pytest>=8.0",
   "ruff>=0.6",
