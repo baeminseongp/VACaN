@@ -1,0 +1,18 @@
+{
+  "scenario_id": "synthetic-minimal-v1",
+  "source_type": "synthetic_test_fixture",
+  "created_for": "VACaN canonical contract validation",
+  "contains_personal_data": false,
+  "redistribution": "repository-local fixture",
+  "coordinate_reference": "LOCAL_METRIC",
+  "coordinate_unit": "meter",
+  "contract_version": "0.1.0",
+  "files": [
+    "zones.geojson",
+    "congestion.csv",
+    "observations.csv",
+    "robots.csv",
+    "paths.csv",
+    "replanning_events.csv"
+  ]
+}

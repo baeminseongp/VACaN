@@ -1,0 +1,10 @@
+{
+  "source_data_root": "/media/engineer/DATA1/datasets",
+  "derived_data_root": "/home/engineer/VACaN/data/processed",
+  "layout": {
+    "source_archives": "{source_data_root}/{dataset_id}/downloads",
+    "source_extracted": "{source_data_root}/{dataset_id}/extracted",
+    "processed": "{derived_data_root}/{dataset_id}/{scenario_id}"
+  },
+  "policy": "Public source datasets may be mounted read-only. Generated derivatives use the writable project data/processed directory; source code and tiny test fixtures remain in the repository."
+}

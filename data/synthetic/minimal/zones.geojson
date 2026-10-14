@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "name": "synthetic-minimal-v1-zones",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"zone_id": "Z1", "area_m2": 20.0, "walkable": true, "semantic_type": "entrance"},
+      "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [5, 0], [5, 4], [0, 4], [0, 0]]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"zone_id": "Z2", "area_m2": 20.0, "walkable": true, "semantic_type": "corridor"},
+      "geometry": {"type": "Polygon", "coordinates": [[[5, 0], [10, 0], [10, 4], [5, 4], [5, 0]]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"zone_id": "Z3", "area_m2": 20.0, "walkable": true, "semantic_type": "exit"},
+      "geometry": {"type": "Polygon", "coordinates": [[[10, 0], [15, 0], [15, 4], [10, 4], [10, 0]]]}
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Linked visual analytics for indoor crowd sensing and congestion-aware robot navigation.">
+  <title>VACaN · Crowd & Robot Navigation</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css?v=__BUILD_VERSION__">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div><div class="eyebrow">VISUAL ANALYTICS RESEARCH PROTOTYPE</div><h1>VACaN <span>Indoor Crowd & Robot Navigation</span></h1></div>
+      </div>
+      <div class="header-meta"><span class="status-dot"></span><span>ATC · 2012-11-14</span><span class="divider"></span><span id="clockLabel">Loading data…</span></div>
+    </header>
+
+    <section class="control-strip" aria-label="Dashboard controls">
+      <button id="playButton" class="play-button" type="button" aria-label="Play timeline">▶</button>
+      <input id="timeSlider" type="range" min="0" max="0" value="0" aria-label="Analysis time">
+      <div class="control-group" role="group" aria-label="Map layer"><button class="segmented active" data-layer="density" type="button">Density</button><button class="segmented" data-layer="coverage" type="button">Coverage</button></div>
+      <label class="select-wrap">Robot <select id="robotSelect" aria-label="Selected robot"></select></label>
+      <label class="check-wrap"><input id="baselineToggle" type="checkbox" checked> Baseline</label>
+      <label class="check-wrap"><input id="awareToggle" type="checkbox" checked> Aware path</label>
+    </section>
+
+    <section class="metrics-row" aria-label="Current metrics">
+      <article class="metric"><span>Observed coverage</span><strong id="coverageMetric">—</strong><small id="coverageDelta">fixed + mobile</small></article>
+      <article class="metric"><span>Unknown area</span><strong id="unknownMetric">—</strong><small>not interpreted as empty</small></article>
+      <article class="metric"><span>ETA difference</span><strong id="etaMetric">—</strong><small>aware − baseline</small></article>
+      <article class="metric"><span>Exposure difference</span><strong id="exposureMetric">—</strong><small>ground-truth proxy</small></article>
+    </section>
+
+    <section class="workspace">
+      <article class="panel map-panel">
+        <div class="panel-heading"><div><span class="panel-index">01</span><h2>Spatial situation</h2></div><div id="mapLegend" class="legend"></div></div>
+        <div id="mapStage" class="map-stage"><svg id="mapSvg" role="img" aria-label="ATC zone congestion and robot paths"></svg><div class="north-arrow" aria-hidden="true"><b>N</b><span>↑</span></div><div class="map-scale"><i></i><span>10 m</span></div></div>
+      </article>
+
+      <aside class="panel inspector-panel">
+        <div class="panel-heading"><div><span class="panel-index">02</span><h2>Evidence inspector</h2></div><span id="inspectorDataset" class="scenario-badge">ATC</span></div>
+        <div id="atcInspector">
+          <div id="zoneEmpty" class="empty-state">Select a zone or replanning event to inspect its evidence.</div>
+          <div id="zoneDetails" hidden>
+            <div class="zone-title"><span id="zoneSwatch"></span><div><small>SELECTED ZONE</small><h3 id="zoneName"></h3></div></div>
+            <dl class="detail-grid"><div><dt>Density</dt><dd id="zoneDensity"></dd></div><div><dt>Relative level</dt><dd id="zoneLevel"></dd></div><div><dt>Observation</dt><dd id="zoneState"></dd></div><div><dt>Information age</dt><dd id="zoneAge"></dd></div><div><dt>Confidence</dt><dd id="zoneConfidence"></dd></div><div><dt>Source</dt><dd id="zoneSource"></dd></div></dl>
+            <div class="evidence-note"><b>Observed</b><p id="observedText"></p></div>
+            <div class="evidence-note inference"><b>Interpretation</b><p id="inferenceText"></p></div>
+            <section class="demo-cctv" aria-labelledby="demoCctvTitle">
+              <div class="demo-cctv-heading"><div><small>DEMO CCTV PROXY</small><h4 id="demoCctvTitle">ATC grid → CAVIAR evidence</h4></div><span>NOT SPATIALLY ALIGNED</span></div>
+              <p class="demo-mapping"><b id="demoAtcZone">—</b><span>→</span><b id="demoCaviarZone">—</b></p>
+              <div class="caviar-frame-controls"><button id="caviarPrevious" type="button" aria-label="Previous evidence frame">←</button><div><b id="caviarFrameLabel">Frame —</b><small id="caviarTimeLabel">—</small></div><button id="caviarNext" type="button" aria-label="Next evidence frame">→</button></div>
+              <div class="camera-switch" role="group" aria-label="CCTV camera"><button class="active" data-camera="0" type="button">Corridor</button><button data-camera="1" type="button">Front</button></div>
+              <div id="caviarMediaNotice" class="media-notice" hidden></div>
+              <video id="evidenceVideo" controls muted playsinline preload="metadata"></video>
+              <dl class="caviar-counts"><div><dt>Corridor count</dt><dd id="corridorCount">—</dd></div><div><dt>Front count</dt><dd id="frontCount">—</dd></div></dl>
+              <p class="caviar-caveat"><b>Demonstration only.</b> ATC and CAVIAR are different venues. This deterministic proxy must not be interpreted as an actual camera-to-zone calibration.</p>
+            </section>
+          </div>
+          <div class="event-header"><span>NEARBY REPLANNING EVENTS</span><span id="eventCount"></span></div><div id="eventList" class="event-list"></div>
+        </div>
+      </aside>
+
+      <article class="panel timeline-panel">
+        <div class="panel-heading"><div><span class="panel-index">03</span><h2>Crowd density over time</h2></div><div class="timeline-keys"><span class="key density-mean">Area-weighted mean</span><span class="key density-p90">P90 zone</span><span class="key replan">Replan</span></div></div>
+        <div class="timeline-readout"><span><small>CURRENT MEAN</small><strong id="timelineMean">—</strong></span><span><small>CURRENT P90</small><strong id="timelineP90">—</strong></span><p>P90 means 90% of zones have density at or below this value.</p></div>
+        <svg id="timelineSvg" role="img" aria-label="Numeric crowd density in persons per square metre over time"></svg><div class="timeline-caption"><span id="timelineStart">—</span><span>person/m² · click graph to inspect time</span><span id="timelineEnd">—</span></div>
+      </article>
+
+      <article class="panel compare-panel">
+        <div class="panel-heading"><div><span class="panel-index">04</span><h2>Path comparison</h2></div><span id="planningTime" class="mono-label"></span></div>
+        <div class="route-comparison">
+          <div class="route-name baseline"><span></span><b>Baseline</b><small>shortest distance</small></div><div class="route-name aware"><span></span><b>Congestion-aware</b><small>density + freshness</small></div>
+          <div class="compare-stat"><small>Distance</small><b id="baselineDistance"></b><strong id="awareDistance"></strong></div><div class="compare-stat"><small>ETA proxy</small><b id="baselineEta"></b><strong id="awareEta"></strong></div><div class="compare-stat"><small>Exposure</small><b id="baselineExposure"></b><strong id="awareExposure"></strong></div><div class="compare-stat"><small>Stale / unknown</small><b id="baselineUncertainty"></b><strong id="awareUncertainty"></strong></div>
+        </div><p class="disclaimer" id="disclaimer"></p>
+      </article>
+
+    </section>
+  </main>
+
+  <script>window.VACAN_BUILD_VERSION = "__BUILD_VERSION__";</script>
+  <script src="app.js?v=__BUILD_VERSION__" defer></script>
+</body>
+</html>

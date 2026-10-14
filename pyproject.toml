@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vacan"
+version = "0.1.0"
+description = "Visual analytics for crowd-aware multi-robot navigation"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary - research prototype" }
+authors = [{ name = "VACaN research team" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+data = [
+  "geopandas>=1.0",
+  "polars>=1.0",
+  "pyarrow>=17.0",
+  "shapely>=2.0",
+]
+api = [
+  "fastapi>=0.115",
+  "uvicorn>=0.30",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

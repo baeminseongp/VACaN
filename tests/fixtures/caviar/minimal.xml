@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataset name="minimal">
+  <frame number="0">
+    <objectlist>
+      <object id="7"><box h="20" w="10" xc="40" yc="50"/></object>
+    </objectlist>
+    <grouplist/>
+  </frame>
+  <frame number="1"><objectlist/><grouplist/></frame>
+</dataset>

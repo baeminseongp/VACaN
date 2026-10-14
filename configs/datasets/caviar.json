@@ -1,0 +1,43 @@
+{
+  "dataset_id": "caviar-lisbon-walkbyshop1-v1",
+  "source_url": "https://homepages.inf.ed.ac.uk/rbf/CAVIARDATA1/",
+  "license": "CC BY-SA; acknowledge EC Funded CAVIAR project/IST 2001 37540",
+  "retrieval_root": "/media/engineer/DATA1/datasets/CAVIAR",
+  "image": {"width_px": 384, "height_px": 288, "fps": 25},
+  "views": [
+    {
+      "camera_id": "LISBON_CORRIDOR",
+      "video": "raw/Lisbon/WalkByShop1cor/WalkByShop1cor.mpg",
+      "annotations": "raw/Lisbon/WalkByShop1cor/cwbs1gt.xml",
+      "calibration_bounds_m": {"x_min": 0.0, "x_max": 2.9, "y_min": -1.1, "y_max": 9.75},
+      "correspondences": [
+        {"image_px": [91, 163], "ground_cm": [0, 975]},
+        {"image_px": [241, 163], "ground_cm": [290, 975]},
+        {"image_px": [98, 266], "ground_cm": [0, -110]},
+        {"image_px": [322, 265], "ground_cm": [290, -110]}
+      ]
+    },
+    {
+      "camera_id": "LISBON_FRONT",
+      "video": "raw/Lisbon/WalkByShop1front/WalkByShop1front.mpg",
+      "annotations": "raw/Lisbon/WalkByShop1front/fwbs1gt.xml",
+      "calibration_bounds_m": {"x_min": 0.0, "x_max": 3.82, "y_min": 0.0, "y_max": 9.75},
+      "correspondences": [
+        {"image_px": [60, 153], "ground_cm": [0, 0]},
+        {"image_px": [359, 153], "ground_cm": [0, 975]},
+        {"image_px": [50, 201], "ground_cm": [382, 98]},
+        {"image_px": [367, 200], "ground_cm": [382, 878]}
+      ]
+    }
+  ],
+  "common_evaluation_bounds_m": {"x_min": 0.0, "x_max": 2.9, "y_min": 0.0, "y_max": 9.75},
+  "zone_size_m": 1.0,
+  "output_directory": "/home/engineer/VACaN/data/processed/caviar/walkbyshop1",
+  "paper_output_directory": "/home/engineer/VACaN/paper/pacificvis/figures/generated/caviar-step6",
+  "notes": [
+    "Bounding-box bottom center is used as the pedestrian ground-contact proxy.",
+    "The four calibration points per view exactly determine a projective homography; their residual is in-sample, not held-out error.",
+    "Cross-view zone counts compare independent annotations inside common calibration support and can differ because of visibility, occlusion, and labeling scope.",
+    "CAVIAR notes occasional duplicate/missing frames; this first evaluation uses the supplied equal-length frame indices."
+  ]
+}

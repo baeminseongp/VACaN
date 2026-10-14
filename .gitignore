@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+dist/
+build/
+
+# Large or derived research data
+data/external/*
+data/interim/*
+data/processed/*
+!data/external/README.md
+!data/interim/README.md
+!data/processed/README.md
+
+# Generated experiment and paper artifacts
+experiments/outputs/*
+!experiments/outputs/README.md
+paper/pacificvis/figures/generated/*
+!paper/pacificvis/figures/generated/README.md
+
+# Frontend build products
+apps/web/node_modules/
+apps/web/dist/
+apps/web/source-data/
+
+.env
+.DS_Store

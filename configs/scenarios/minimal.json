@@ -1,0 +1,15 @@
+{
+  "scenario_id": "synthetic-minimal-v1",
+  "title": "Three-zone observation freshness fixture",
+  "dataset_kind": "synthetic",
+  "contract_version": "0.1.0",
+  "timezone": "UTC",
+  "coordinate_reference": "LOCAL_METRIC",
+  "coordinate_unit": "meter",
+  "density_thresholds": {
+    "low_upper_exclusive": 0.5,
+    "medium_upper_exclusive": 1.5
+  },
+  "stale_after_s": 30,
+  "data_directory": "data/synthetic/minimal"
+}
