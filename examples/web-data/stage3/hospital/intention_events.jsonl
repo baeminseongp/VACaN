@@ -1,0 +1,4 @@
+{"timestamp":"2026-01-01T01:10:06.216667+00:00","simulation_time_s":5.216666666666667,"scenario":"hospital","world_frame":"isaac_world_enu","seed":5201,"pedestrian_id":"hospital_01","destination_grid":[2,3]}
+{"timestamp":"2026-01-01T01:10:08.216667+00:00","simulation_time_s":7.216666666666667,"scenario":"hospital","world_frame":"isaac_world_enu","seed":5201,"pedestrian_id":"hospital_03","destination_grid":[2,4]}
+{"timestamp":"2026-01-01T01:10:08.816667+00:00","simulation_time_s":7.816666666666666,"scenario":"hospital","world_frame":"isaac_world_enu","seed":5201,"pedestrian_id":"hospital_01","destination_grid":[2,4]}
+{"timestamp":"2026-01-01T01:10:09.216667+00:00","simulation_time_s":8.216666666666667,"scenario":"hospital","world_frame":"isaac_world_enu","seed":5201,"pedestrian_id":"hospital_03","destination_grid":[2,3]}

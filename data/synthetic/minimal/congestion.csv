@@ -1,5 +1,0 @@
-timestamp,zone_id,pedestrian_count,density_per_m2,congestion_level,observation_state,source,confidence,last_observed,observation_age_s
-2026-01-01T00:00:00Z,Z1,4,0.2,LOW,FIXED_COVERED,CCTV-01,0.98,2026-01-01T00:00:00Z,0
-2026-01-01T00:00:00Z,Z2,,,UNKNOWN,UNKNOWN,NONE,,,
-2026-01-01T00:00:00Z,Z3,32,1.6,HIGH,ROBOT_RECOVERED,ROBOT-01,0.90,2025-12-31T23:59:50Z,10
-2026-01-01T00:00:40Z,Z3,30,1.5,HIGH,STALE,ROBOT-01,0.75,2026-01-01T00:00:00Z,40

@@ -1,51 +1,36 @@
-# Architecture
-
-## Design objective
-
-VACaN supports reproducible component validation and an interactive visual
-analytics system without coupling research algorithms to a specific dataset or
-frontend framework.
+# VACaN architecture and access boundary
 
 ```text
-dataset adapters / simulation
-             |
-             v
- canonical spatiotemporal contracts
-             |
-      +------+------+
-      |             |
-      v             v
- analytics      API / web UI
- density        map + timeline
- coverage       coverage + paths
- planning       provenance views
-      |             |
-      +------+------+
-             v
- experiment metrics and PacificVis artifacts
+Isaac Sim official environment ─┬─ Nova Carter sensors ─> observed state
+Pegasus PersonController ───────┘          │
+                                            ├─ congestion estimate
+                                            ├─ intention prediction
+                                            └─ timestamp freshness
+                                                        │
+                                               Recurrent PPO (Isaac Lab)
+                                                        │
+                                        differential drive (v, omega)
+
+Isaac Sim complete state ─> privileged Ground Truth interface
+                              ├─ training-label generation
+                              ├─ reference planning
+                              ├─ evaluation
+                              └─ counterfactual analysis
 ```
 
-## Boundaries
+The observed-state policy interface and privileged simulator interface are
+separate modules. Ground Truth state, global pedestrian poses, exact occupancy,
+and simulator handles must never be passed to the navigation policy.
 
-- `src/vacan`: deterministic, dataset-independent domain logic.
-- `experiments`: scenario runners, evaluation protocols, and generated metrics.
-- `apps/api`: delivery layer for canonical records and derived analytics.
-- `apps/web`: linked visual views; it does not become the source of research
-  truth.
-- `paper/pacificvis`: paper-only manifests and publication artifacts. Generated
-  figures should be traceable to an experiment configuration.
-- `data`: local data lifecycle. Licensing may prohibit committing source data.
+CCTV-covered grid cells may expose exact current crowd density as the explicit
+controlled research assumption in `AGENTS.md`; those cells have no freshness
+decay. Robot observations update visible non-CCTV cells, whose age remains an
+independent Freshness channel. Congestion, Intention, and Freshness are logged
+as independently identifiable factors.
 
-## Scenario isolation
+Stage 0 establishes only the runtime and package boundaries. Prediction models,
+Recurrent PPO training, reference planning, and counterfactual experiments are
+not implemented in this stage.
 
-ATC, CAVIAR, JRDB, Mall, and synthetic scenes are independent scenarios. A
-future integrated synthetic scene may combine roles, but real datasets must not
-be represented as if they were synchronized sensors in one physical venue.
-
-## Time and coordinates
-
-- Timestamps use ISO 8601 UTC in canonical files.
-- Metric world coordinates use meters.
-- Each scenario declares a coordinate reference and map origin.
-- Video-only data retains frame/time-code identifiers in adapter-specific
-  provenance before projection into world coordinates.
+The preserved reconstructed 2D simulator is legacy research code. It is not a
+fallback for Isaac Sim and is not selected by `configs/default.yaml`.

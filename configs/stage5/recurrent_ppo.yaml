@@ -1,0 +1,52 @@
+schema_version: 1
+algorithm: sb3-contrib/RecurrentPPO
+backend: isaac-sim-5.1-isaac-lab-2.3.2-pegasus-5.1
+policy_scope: single_environment
+num_envs: 1
+costmap_decay_s: 300.0
+timing: {physics_hz: 60.0, costmap_hz: 5.0, control_hz: 5.0}
+observation:
+  map_channels: [static_obstacle, dynamic_crowd]
+  map_shape: [2, 61, 61]
+  robot_shape: [8]
+  privileged_ground_truth: false
+  freshness_channel: false
+policy:
+  spatial_features: 128
+  robot_features: 32
+  recurrent_type: lstm
+  recurrent_hidden_size: 128
+  recurrent_layers: 1
+  actor_layers: [64]
+  critic_layers: [64]
+ppo:
+  learning_rate: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  optimization_epochs: 4
+  max_grad_norm: 0.5
+  entropy_coefficient: 0.001
+  value_coefficient: 0.5
+  rollout_steps: 256
+  batch_size: 64
+  sequence_length: 16
+  smoke_steps: 512
+checkpoints:
+  save_frequency_steps: 10000
+  validation_frequency_steps: 10000
+curriculum:
+  preserve_parameters_between_phases: true
+  phases:
+    - {name: static_navigation, pedestrian_density_scale: 0.0, steps: 100000}
+    - {name: low_density, pedestrian_density_scale: 0.35, steps: 200000}
+    - {name: dynamic_crowd, pedestrian_density_scale: 1.0, steps: 400000}
+    - name: partial_coverage_noise
+      pedestrian_count: 12
+      steps: 400000
+      stage3_overrides:
+        robot_observation:
+          position_noise_std_m: 0.30
+          velocity_noise_std_m_s: 0.20
+          minimum_cell_overlap_ratio: 0.40
+seeds: {train: [5101, 5102, 5103], validation: [15101], test: [25101]}

@@ -1,0 +1,43 @@
+project:
+  name: VACaN
+  stage: 0
+  research_factors: [congestion, intention, freshness]
+
+reproducibility:
+  seed: 20261029
+  deterministic_torch: true
+
+simulation:
+  backend: isaac-sim
+  isaac_sim_version: "5.1.0"
+  isaac_lab_version: "2.3.2"
+  pegasus_version: "5.1.0"
+  robot: nova-carter
+  pedestrian_api: pegasus-person-controller
+  control:
+    type: differential-drive
+    command: [linear_x_m_s, angular_z_rad_s]
+  privileged_evaluation: false
+  ground_truth_policy_access: false
+
+hardware:
+  simulation_gpu_index: 1
+  simulation_gpu_model: NVIDIA GeForce RTX 3090
+  headless: false
+  desktop_only_gpu_indices: [2]
+  desktop_gpu_model: NVIDIA T1000 8GB
+  xorg_gpu_pci_bus_id: "PCI:115:0:0"
+  note: GPU 1 drives Xorg and Isaac Sim; GPU 2 remains excluded from Isaac Sim.
+
+logging:
+  level: INFO
+  format: json
+  output: artifacts/logs/vacan.jsonl
+
+checkpoints:
+  directory: artifacts/checkpoints
+  keep_last: 5
+
+outputs:
+  root: artifacts/runs
+  include_config_snapshot: true

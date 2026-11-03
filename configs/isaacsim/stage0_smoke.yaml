@@ -1,0 +1,49 @@
+schema_version: 1
+project:
+  name: VACaN
+  stage: 0
+  research_factors: [congestion, intention, freshness]
+reproducibility:
+  seed: 20261030
+  deterministic_torch: true
+simulation:
+  backend: isaac-sim
+  isaac_sim_version: "5.1.0"
+  isaac_lab_version: "2.3.2"
+  pegasus_version: "5.1.0"
+  physics_dt: 0.0166666667
+  rendering_dt: 0.0333333333
+  steps: 240
+  movement_threshold_m: 0.05
+  environment: warehouse
+  privileged_evaluation: false
+  ground_truth_policy_access: false
+assets:
+  # Resolved at runtime against get_assets_root_path(). These 5.1 URLs were
+  # independently checked on 2026-10-30; they are not copied from older docs.
+  environments:
+    office: /Isaac/Environments/Office/office.usd
+    hospital: /Isaac/Environments/Hospital/hospital.usd
+    warehouse: /Isaac/Environments/Simple_Warehouse/warehouse_with_forklifts.usd
+  nova_carter: /Isaac/Robots/NVIDIA/NovaCarter/nova_carter.usd
+  pedestrian:
+    character: F_Medical_01
+    expected_asset: /Isaac/People/Characters/F_Medical_01/F_Medical_01.usd
+scene:
+  environment_prim: /World/Environment
+  robot_prim: /World/NovaCarter
+  robot_position: [0.0, 0.0, 0.0]
+  person_name: stage0_person
+  person_start: [2.0, 0.0, 0.0]
+  person_target: [5.0, 0.0, 0.0]
+  person_speed_m_s: 1.0
+logging:
+  level: INFO
+  format: json
+  output: artifacts/stage0/smoke.jsonl
+checkpoints:
+  directory: artifacts/checkpoints
+  keep_last: 5
+outputs:
+  root: artifacts/stage0
+  include_config_snapshot: true

@@ -1,0 +1,21 @@
+{
+  "axis_order": "row_y,column_x",
+  "environment": "warehouse",
+  "inflation_radius_m": 0.5,
+  "origin_xy_m": [
+    -10.0,
+    -8.0
+  ],
+  "resolution_m": 0.2,
+  "schema_version": 1,
+  "shape_rows_columns": [
+    80,
+    100
+  ],
+  "size_xy_m": [
+    20.0,
+    16.0
+  ],
+  "source_voxel_map": "voxel_map.npz",
+  "world_frame": "isaac_world_enu"
+}

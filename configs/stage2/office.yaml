@@ -1,0 +1,24 @@
+schema_version: 1
+backend: isaac-sim-pegasus-nova-carter
+scenario: office
+stage1_config: ../scenarios/office_lobby.yaml
+pedestrian_routes: ../../artifacts/stage1-isaac/train/office/episode-000/resolved_routes.json
+robot:
+  asset: Isaac/Robots/NVIDIA/NovaCarter/nova_carter.usd
+  prim_path: /World/NovaCarter
+  chassis_path: /World/NovaCarter/chassis_link
+  contact_scope: all_rigid_bodies
+  wheel_joints: [joint_wheel_left, joint_wheel_right]
+  wheel_radius_m: 0.14
+  wheel_base_m: 0.4132
+  start_xyz: [0.00, -2.50, 0.25]
+  start_yaw_rad: 0.0
+  goal_xyz: [0.00, 2.50, 0.0]
+  waypoints_xy: [[0.00, 0.00], [0.00, 2.50]]
+action_limits: {max_linear_m_s: 0.60, max_angular_rad_s: 1.00, max_wheel_rad_s: 8.0, max_linear_accel_m_s2: 0.50, max_angular_accel_rad_s2: 1.50}
+baseline: {cruise_speed_m_s: 0.50, angular_gain: 1.8, waypoint_tolerance_m: 0.45, forward_heading_limit_rad: 1.0}
+episode: {physics_dt_s: 0.016666666666666666, rendering_dt_s: 0.016666666666666666, reset_settle_steps: 30, max_steps: 900, goal_tolerance_m: 0.60, collision_termination: true, timeout: true}
+collision: {planar_force_threshold_n: 120.0}
+collision_probe: {enabled: true, position_xyz: [1.40, -2.50, 0.50], size_xyz: [0.20, 1.00, 1.00], drive_steps: 240, command: [0.40, 0.0]}
+navigation_costs: {path_length: 1.0, elapsed_time: 0.01, control_effort: 0.02, collision: 10.0, goal_bonus: 10.0}
+seeds: {train: [4101, 4102, 4103], validation: [14101], test: [24101]}

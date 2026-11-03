@@ -1,0 +1,44 @@
+{
+  "created_utc": "2026-10-31T18:27:33.943659+00:00",
+  "crowd_grid_resolution_m": 4.0,
+  "crowd_grid_shape_rows_columns": [
+    4,
+    8
+  ],
+  "elapsed_s": 52.04795022199687,
+  "environment_asset": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Environments/Hospital/hospital.usd",
+  "free_voxels": 84292,
+  "grid_resolution_m": 0.2,
+  "grid_shape_rows_columns": [
+    80,
+    160
+  ],
+  "inflated_occupied_cells": 6250,
+  "input_sha256": "6efd591c97c04652b13871c06aef7aa42161771196d3ffeeb1e45c1fe0bf605d",
+  "isaac_lab_api": "2.3.2 DirectRLEnv inspected; mapping uses Isaac Lab UsdFileCfg",
+  "method": "official omap generate2d stacked at 0.2 m Z intervals",
+  "occupied_voxels": 20946,
+  "official_2d_dimensions": [
+    160,
+    80,
+    0
+  ],
+  "official_3d_dimensions": [
+    160,
+    80,
+    10
+  ],
+  "pedestrian_count": 0,
+  "raw_occupied_cells": 2735,
+  "robot_spawned": false,
+  "scenario": "hospital",
+  "status": "pass",
+  "unknown_cells": 2275,
+  "unknown_voxels": 22762,
+  "voxel_resolution_m": 0.2,
+  "voxel_shape_zyx": [
+    10,
+    80,
+    160
+  ]
+}

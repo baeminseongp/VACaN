@@ -1,0 +1,24 @@
+schema_version: 1
+status: installed-and-two-process-smoke-verified
+verified_on: "2026-10-30"
+platform:
+  os: Ubuntu 24.04.5 LTS
+  architecture: x86_64
+runtime:
+  isaac_sim: "5.1.0"
+  isaac_lab: "2.3.2"
+  pegasus_simulator: "5.1.0"
+  pegasus_commit: 644da37e9d5268e5f9a34e78bdcfd57a8bab82b4
+  python: "3.11.13 (Isaac Sim bundled interpreter)"
+  pytorch: "2.7.0+cu128"
+  pytorch_cuda_wheel: cu128
+  h5py: "3.14.0"
+sources:
+  isaac_lab_tree: /home/engineer/IsaacLab
+  pegasus_tree: /home/engineer/IsaacLab/external/PegasusSimulator
+notes:
+  - Isaac Sim owns the runtime interpreter; do not install it into VACaN .venv.
+  - The VACaN .venv is for host-side configuration and unit tests only.
+  - CUDA toolkit nvcc is not required by prebuilt Isaac Sim, but a working NVIDIA driver is required.
+  - Two independent Warehouse + Nova Carter + Pegasus Person runs passed on 2026-10-30.
+  - Runtime GPU policy uses GPU 1 (RTX 3090) for Xorg and visible Isaac Sim; GPU 2 (T1000) is rejected by VACaN launchers.

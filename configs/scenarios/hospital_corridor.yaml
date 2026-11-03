@@ -1,0 +1,27 @@
+schema_version: 3
+backend: isaac-sim-pegasus
+scenario: {name: hospital, description: Opposing corridor flows and crossing trajectories in the official hospital.}
+environment:
+  kind: hospital
+  pegasus_name: Hospital
+  asset: Isaac/Environments/Hospital/hospital.usd
+  prim_path: /World/Environment
+episode: {physics_dt_s: 0.03333333333333333, rendering_dt_s: 0.03333333333333333, steps: 420, warmup_steps: 8}
+navmesh: {volume_center: [-10.0, 10.5, 2.0], volume_size: [36.0, 17.0, 6.0], agent_radius_m: 0.35, agent_min_height_m: 1.5, agent_max_step_height_m: 0.25, agent_max_floor_slope_deg: 45.0, min_island_radius_m: 1.0, max_spawn_snap_m: 3.0}
+pedestrian_controller: {waypoint_tolerance_m: 0.35, lookahead_m: 1.0, separation_radius_m: 0.9, separation_gain: 0.30, max_lateral_offset_m: 0.30, route_selection: seeded_round_robin}
+ground_truth:
+  world_frame: isaac_world_enu
+  grid: {origin_xy: [-28.0, 0.0], size_xy: [36.0, 20.0], resolution_m: 0.5}
+  congestion_zones: {corridor_intersection: [-8.0, 4.5, -2.0, 9.5]}
+visualization: {bounds_xy: [-28.0, 8.0, 0.0, 20.0]}
+seeds:
+  train: [2201, 2202, 2203]
+  validation: [12201]
+  test: [22201]
+pedestrians:
+  - {id: hospital_00, character: F_Medical_01, spawn: [-22.0, 6.3, 0.0], destinations: [[1.0, 6.3, 0.0], [-22.0, 6.3, 0.0]], speed_m_s: 1.00}
+  - {id: hospital_01, character: F_Medical_01, spawn: [-19.0, 7.6, 0.0], destinations: [[1.0, 7.6, 0.0], [-19.0, 7.6, 0.0]], speed_m_s: 0.90}
+  - {id: hospital_02, character: M_Medical_01, spawn: [1.0, 6.7, 0.0], destinations: [[-22.0, 6.7, 0.0], [1.0, 6.7, 0.0]], speed_m_s: 1.10}
+  - {id: hospital_03, character: M_Medical_01, spawn: [0.0, 8.0, 0.0], destinations: [[-20.0, 8.0, 0.0], [0.0, 8.0, 0.0]], speed_m_s: 0.95}
+  - {id: hospital_04, character: F_Business_02, spawn: [-5.5, 6.0, 0.0], destinations: [[-5.5, 14.5, 0.0], [-5.5, 6.0, 0.0]], speed_m_s: 1.00}
+  - {id: hospital_05, character: F_Business_02, spawn: [-3.0, 14.5, 0.0], destinations: [[-3.0, 6.0, 0.0], [-3.0, 14.5, 0.0]], speed_m_s: 1.05}

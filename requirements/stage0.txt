@@ -1,0 +1,13 @@
+# Host-side validation environment only. Isaac Sim, Isaac Lab, and Pegasus use
+# Isaac Sim's bundled Python and are recorded in stage0-isaac-manifest.yaml.
+# The RL/simulation packages below support preserved legacy tests; they are not
+# the active VACaN simulator or policy stack.
+numpy==1.26.4
+gymnasium==0.29.1
+stable-baselines3==2.3.2
+sb3-contrib==2.3.0
+PyYAML==6.0.3
+pytest==8.4.2
+scipy==1.17.1
+opencv-python==4.11.0.86
+matplotlib==3.11.2

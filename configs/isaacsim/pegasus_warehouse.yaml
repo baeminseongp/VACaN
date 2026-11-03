@@ -1,0 +1,62 @@
+schema_version: 1
+runtime:
+  isaac_sim_version: "4.2.0"
+  pegasus_version: "4.2.0"
+  headless: false
+  physics_dt: 0.02
+  rendering_dt: 0.0333333333
+
+environment:
+  source: pegasus_builtin
+  name: Warehouse with Forklifts
+  stage_prim: /World/layout
+  custom_usd: null
+  asset_relative_path: /Isaac/Environments/Simple_Warehouse/warehouse_with_forklifts.usd
+
+viewport:
+  eye: [11.0, 13.0, 11.0]
+  target: [0.0, 2.0, 0.0]
+
+recording:
+  enabled: true
+  output: artifacts/isaacsim/warehouse/ground_truth.jsonl
+  flush_every_steps: 1
+
+ros:
+  enabled: false
+  note: Set true only after ROS Noetic and the Isaac Sim ROS 1 bridge are available.
+  pedestrian_state_topic: /isaacsim/persons_states
+  pedestrian_command_topic: /sfm_cmd
+
+robot:
+  enabled: false
+  usd: null
+  prim: /World/robot
+  note: Pegasus built-in environments contain scenery only; add a robot USD and ROS graphs separately.
+
+pedestrians:
+  - name: person0
+    character: male_adult_construction_01_new
+    start: [0.0, 2.0, 0.0]
+    waypoints: [[-5.0, 0.0, 0.0], [0.0, 2.0, 0.0]]
+    speed_m_s: 1.0
+  - name: person1
+    character: male_adult_construction_03
+    start: [3.0, 3.0, 0.0]
+    waypoints: [[-3.5, 1.5, 0.0], [1.0, 1.5, 0.0]]
+    speed_m_s: 0.9
+  - name: person2
+    character: F_Medical_01
+    start: [0.0, 5.0, 0.0]
+    waypoints: [[-2.0, 1.0, 0.0], [-6.0, 0.0, 0.0]]
+    speed_m_s: 0.9
+  - name: person3
+    character: M_Medical_01
+    start: [3.0, 5.0, 0.0]
+    waypoints: [[4.5, 3.0, 0.0], [4.5, 7.0, 0.0]]
+    speed_m_s: 1.0
+  - name: person4
+    character: original_male_adult_construction_02
+    start: [1.5, 7.0, 0.0]
+    waypoints: [[3.0, 7.0, 0.0], [3.0, 3.0, 0.0]]
+    speed_m_s: 1.0

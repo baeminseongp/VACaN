@@ -1,0 +1,13 @@
+# Host-side environment snapshot on Ubuntu 24.04 x86_64, Python 3.11.15.
+# This is not the Isaac Sim/Isaac Lab/Pegasus environment; see
+# stage0-isaac-manifest.yaml for that runtime.
+gymnasium==0.29.1
+matplotlib==3.11.2
+numpy==1.26.4
+opencv-python==4.11.0.86
+pytest==8.4.2
+PyYAML==6.0.3
+sb3-contrib==2.3.0
+scipy==1.17.1
+stable-baselines3==2.3.2
+torch==2.2.1+cpu

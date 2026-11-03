@@ -1,5 +1,3 @@
-"""Dataset-independent domain primitives for VACaN."""
+"""VACaN research framework."""
 
-from .models import CongestionLevel, ObservationState, SensorType
-
-__all__ = ["CongestionLevel", "ObservationState", "SensorType"]
+__version__ = "0.2.0"

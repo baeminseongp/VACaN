@@ -1,0 +1,10 @@
+# Install only in the separate Python 3.8 / ROS Noetic iCrowdNav environment.
+# Install torch/torchvision separately with the index matching the working CUDA driver.
+gymnasium==0.28.1
+stable-baselines3==2.0.0
+numpy==1.24.4
+opencv-python==4.8.1.78
+scipy==1.10.1
+PyYAML==6.0.1
+ultralytics==8.3.221
+tensorboard==2.14.0

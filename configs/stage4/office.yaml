@@ -1,0 +1,28 @@
+schema_version: 1
+scenario: office
+world_frame: isaac_world_enu
+stage1_config: ../scenarios/office_lobby.yaml
+stage2_config: ../stage2/office.yaml
+stage3_config: ../stage3/office.yaml
+mapping:
+  voxel_resolution_m: 0.2
+  occupancy_2d_resolution_m: 0.2
+  bounds_xyz_m: [-12.0, -12.0, 0.10, 12.0, 12.0, 2.10]
+  collision_root: /World/Environment
+  excluded_path_tokens: [ground, floor_visual, pedestrian, nova_carter]
+  projection_height_m: [0.10, 1.10]
+  robot_radius_m: 0.38
+  safety_margin_m: 0.12
+observation: {crop_rows: 61, crop_columns: 61, rotate_with_robot: true, crowd_clip: 6.0, max_goal_distance_m: 40.0}
+frequencies: {physics_hz: 60.0, pedestrian_hz: 60.0, costmap_hz: 5.0, control_hz: 5.0}
+reward: {progress: 2.0, goal: 25.0, collision: 20.0, social: 1.0, time: 0.01, smooth: 0.05, personal_space_m: 0.8}
+episode: {max_duration_s: 120.0, goal_tolerance_m: 0.5, collision_termination: true}
+teleop_mapping:
+  depth_resolution: [160, 90]
+  depth_frequency_hz: 2.0
+  viewport_frequency_hz: 20.0
+  depth_max_range_m: 12.0
+  depth_ray_stride: 4
+  camera_offset_xyz_m: [0.30, 0.0, 0.65]
+  max_duration_s: 600.0
+  save_depth_frames: false

@@ -1,0 +1,27 @@
+schema_version: 3
+backend: isaac-sim-pegasus
+scenario: {name: warehouse, description: Bidirectional movement through shelf-separated and partially occluded passages.}
+environment:
+  kind: warehouse
+  pegasus_name: Warehouse with Shelves
+  asset: Isaac/Environments/Simple_Warehouse/warehouse_multiple_shelves.usd
+  prim_path: /World/Environment
+episode: {physics_dt_s: 0.03333333333333333, rendering_dt_s: 0.03333333333333333, steps: 420, warmup_steps: 8}
+navmesh: {volume_center: [0.0, 0.0, 2.0], volume_size: [24.0, 36.0, 6.0], agent_radius_m: 0.35, agent_min_height_m: 1.5, agent_max_step_height_m: 0.25, agent_max_floor_slope_deg: 45.0, min_island_radius_m: 1.0, max_spawn_snap_m: 3.0}
+pedestrian_controller: {waypoint_tolerance_m: 0.35, lookahead_m: 0.9, separation_radius_m: 0.9, separation_gain: 0.30, max_lateral_offset_m: 0.25, route_selection: seeded_round_robin}
+ground_truth:
+  world_frame: isaac_world_enu
+  grid: {origin_xy: [-12.0, -12.0], size_xy: [24.0, 28.0], resolution_m: 0.5}
+  congestion_zones: {selected_passage: [-2.5, -4.0, 2.5, 4.0]}
+visualization: {bounds_xy: [-12.0, 12.0, -12.0, 16.0]}
+seeds:
+  train: [3301, 3302, 3303]
+  validation: [13301]
+  test: [23301]
+pedestrians:
+  - {id: warehouse_00, character: F_Business_02, spawn: [-8.0, -5.0, 0.0], destinations: [[8.0, -5.0, 0.0], [-8.0, -5.0, 0.0]], speed_m_s: 1.00}
+  - {id: warehouse_01, character: F_Business_02, spawn: [8.0, -4.0, 0.0], destinations: [[-8.0, -4.0, 0.0], [8.0, -4.0, 0.0]], speed_m_s: 0.95}
+  - {id: warehouse_02, character: F_Medical_01, spawn: [-8.0, 0.0, 0.0], destinations: [[8.0, 0.0, 0.0], [-8.0, 0.0, 0.0]], speed_m_s: 1.10}
+  - {id: warehouse_03, character: F_Medical_01, spawn: [8.0, 1.0, 0.0], destinations: [[-8.0, 1.0, 0.0], [8.0, 1.0, 0.0]], speed_m_s: 1.00}
+  - {id: warehouse_04, character: M_Medical_01, spawn: [-8.0, 5.0, 0.0], destinations: [[8.0, 5.0, 0.0], [-8.0, 5.0, 0.0]], speed_m_s: 0.90}
+  - {id: warehouse_05, character: M_Medical_01, spawn: [8.0, 5.0, 0.0], destinations: [[-8.0, 5.0, 0.0], [8.0, 5.0, 0.0]], speed_m_s: 1.05}

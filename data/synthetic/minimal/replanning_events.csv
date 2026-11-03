@@ -1,2 +1,0 @@
-timestamp,event_id,robot_id,trigger_type,trigger_zone_id,source_sensor_id,old_path_signature,new_path_signature,eta_delta_s,distance_delta_m,reason
-2026-01-01T00:00:00Z,E-001,ROBOT-01,NEW_OBSERVATION,Z3,ROBOT-01,Z3>Z2>Z1,Z3>Z1,1.5,-5.0,New robot observation changed the recommended route

@@ -1,9 +1,0 @@
-Inspect only observable crowd evidence in this shopping-mall frame.
-
-Return one CSV-compatible record with:
-- predicted_count: integer number of visible people
-- predicted_level: LOW, MEDIUM, or HIGH using the supplied scenario thresholds
-- description: one short description of crowd spacing or flow
-- grounded_evidence: visible cues supporting the count and level
-
-Do not identify people, infer sensitive attributes, guess hidden causes, or claim metric floor density.
