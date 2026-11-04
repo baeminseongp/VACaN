@@ -301,3 +301,45 @@ physical smoke training only after all Stage 4 maps validate:
 
 See `docs/stage-5-report.md`. Stage 5 is not complete until the physical smoke,
 checkpoint reload, resume, and held-out evaluations pass.
+
+## Stage 6 Office reference evaluation
+
+Stage 6 freezes the selected Office policy and compares its physically executed
+trajectory with a time-expanded full-information reference planner using one
+shared navigation cost. The reference planner is an auxiliary efficiency
+comparator and is not claimed to be globally optimal.
+
+```bash
+.venv/bin/python scripts/run_stage6_office.py \
+  --seed 15101 --gpu 1 --headless
+```
+
+See `docs/stage-6-report.md`.
+
+## Stage 7 Office frozen-policy comparison
+
+Stage 7 compares Actual DRL, Full-information DRL, Congestion-error DRL,
+Intention-error DRL, and Combined-error DRL with the identical frozen Office
+Recurrent PPO policy. Error branches use Full-information DRL as their primary
+baseline; the Stage 6 planner remains an auxiliary efficiency comparator.
+
+The repository contains the selected policy, Office occupancy map, and minimum
+matched Stage 6 records required for host decision replay:
+
+```bash
+git lfs install
+git lfs pull
+.venv/bin/python scripts/analyze_stage7_office_decisions.py \
+  --output artifacts/stage7/office/decision
+```
+
+The full closed-loop Isaac Sim rerun additionally requires Isaac Sim 5.1,
+Isaac Lab 2.3.2, Pegasus 5.1, and access to the official NVIDIA assets:
+
+```bash
+.venv/bin/python scripts/run_stage7_office.py \
+  --seed 15101 --gpu 1 --headless
+```
+
+See `docs/stage-7-report.md`. The redesigned closed-loop run remains pending;
+Stage 8 has not started.

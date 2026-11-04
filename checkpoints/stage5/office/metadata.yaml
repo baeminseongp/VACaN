@@ -1,0 +1,16 @@
+schema_version: 1
+framework: sb3-contrib RecurrentPPO
+scenario: office
+policy_scope: single_environment
+seed: 5101
+training_steps: 112384
+filename: recurrent_ppo.zip
+sha256: d53598a14f636f2303d01da727f5204dc053135be1c5d3b1c46fc39da5408b30
+source_artifact: artifacts/stage5/train-office-partial_coverage_noise-seed5101-20261102T071023Z/policy-latest.zip
+selected_for:
+  - stage6_office_reference_comparison
+  - stage7_office_frozen_policy_comparison
+notes: >-
+  Selected Stage 5 Phase 4 social=1 policy. Stage 7 uses this identical frozen
+  policy for Actual, Full-information, Congestion-error, Intention-error, and
+  Combined-error DRL branches.

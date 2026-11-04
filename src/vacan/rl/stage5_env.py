@@ -33,7 +33,8 @@ class VacanNavigationEnv(gym.Env):
 
     def __init__(self, physical: PhysicalNavigation, scenario: str, seed: int,
                  static_map_path: Path, stage3_config: dict[str, Any],
-                 stage4_config: dict[str, Any], velocity_limits: VelocityLimits) -> None:
+                 stage4_config: dict[str, Any], velocity_limits: VelocityLimits,
+                 intervention_manager: Any | None = None) -> None:
         super().__init__()
         self.physical = physical
         self.scenario = scenario
@@ -72,6 +73,7 @@ class VacanNavigationEnv(gym.Env):
         self.episode_min_person_distance_m: float | None = None
         self.costmap: DynamicCostmap | None = None
         self.latest_costmap_record: dict[str, Any] | None = None
+        self.intervention_manager = intervention_manager
 
     @property
     def goal_xy(self) -> tuple[float, float]:
@@ -103,7 +105,9 @@ class VacanNavigationEnv(gym.Env):
         self.previous_distance = float(physical_observation["goal_distance_m"])
         self.episode_social_violation_steps = 0
         self.episode_min_person_distance_m = None
-        self.costmap = DynamicCostmap(self.stage3_config, episode_seed)
+        self.costmap = DynamicCostmap(
+            self.stage3_config, episode_seed, self.intervention_manager
+        )
         self.latest_costmap_record = None
         self._tick_costmap(physical_observation)
         observation = self._policy_observation(physical_observation)

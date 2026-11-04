@@ -11,6 +11,7 @@ from typing import Any
 import gymnasium as gym
 import numpy as np
 import torch
+from sb3_contrib.common.recurrent.type_aliases import RNNStates
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
@@ -74,6 +75,26 @@ class DeterministicPrediction:
     hidden_state: tuple[np.ndarray, np.ndarray]
 
 
+@dataclass(frozen=True)
+class RecurrentDiagnosticState:
+    """Actor and critic recurrent states required for faithful value logging."""
+
+    actor: tuple[np.ndarray, np.ndarray]
+    critic: tuple[np.ndarray, np.ndarray]
+
+
+@dataclass(frozen=True)
+class DiagnosticPrediction:
+    """One deterministic recurrent inference result with analysis diagnostics."""
+
+    action: np.ndarray
+    recurrent_state: RecurrentDiagnosticState
+    value_estimate: float
+    action_log_probability: float
+    action_mean: np.ndarray
+    action_std: np.ndarray
+
+
 def predict_deterministic(model: Any, observation: dict[str, np.ndarray],
                           hidden_state: tuple[np.ndarray, np.ndarray] | None,
                           episode_start: np.ndarray | bool) -> DeterministicPrediction:
@@ -87,6 +108,73 @@ def predict_deterministic(model: Any, observation: dict[str, np.ndarray],
     if next_state is None or len(next_state) != 2:
         raise RuntimeError("recurrent policy did not return an LSTM hidden state")
     return DeterministicPrediction(np.asarray(action, dtype=np.float32), next_state)
+
+
+def predict_deterministic_with_diagnostics(
+    model: Any,
+    observation: dict[str, np.ndarray],
+    recurrent_state: RecurrentDiagnosticState | None,
+    episode_start: np.ndarray | bool,
+) -> DiagnosticPrediction:
+    """Run inference while retaining the critic state and policy statistics."""
+    policy = model.policy
+    policy.set_training_mode(False)
+    obs_tensor, vectorized = policy.obs_to_tensor(observation)
+    if isinstance(obs_tensor, dict):
+        n_envs = int(next(iter(obs_tensor.values())).shape[0])
+    else:
+        n_envs = int(obs_tensor.shape[0])
+    starts = np.asarray([episode_start], dtype=bool) if np.ndim(episode_start) == 0 else np.asarray(
+        episode_start, dtype=bool
+    )
+    if starts.shape != (n_envs,):
+        raise ValueError(f"episode_start shape {starts.shape} does not match {n_envs} environments")
+    if recurrent_state is None:
+        shape = policy.lstm_hidden_state_shape
+        zeros = np.concatenate([np.zeros(shape, dtype=np.float32) for _ in range(n_envs)], axis=1)
+        recurrent_state = RecurrentDiagnosticState(
+            actor=(zeros.copy(), zeros.copy()), critic=(zeros.copy(), zeros.copy())
+        )
+
+    def tensors(state: tuple[np.ndarray, np.ndarray]) -> tuple[torch.Tensor, torch.Tensor]:
+        return tuple(torch.as_tensor(item, dtype=torch.float32, device=policy.device)
+                     for item in state)  # type: ignore[return-value]
+
+    torch_states = RNNStates(pi=tensors(recurrent_state.actor),
+                             vf=tensors(recurrent_state.critic))
+    starts_tensor = torch.as_tensor(starts, dtype=torch.float32, device=policy.device)
+    with torch.no_grad():
+        actions, values, log_probabilities, next_states = policy.forward(
+            obs_tensor, torch_states, starts_tensor, deterministic=True
+        )
+        distribution, _ = policy.get_distribution(obs_tensor, torch_states.pi, starts_tensor)
+        means = distribution.distribution.mean
+        standard_deviations = distribution.distribution.stddev
+
+    action = actions.cpu().numpy()
+    if isinstance(policy.action_space, gym.spaces.Box):
+        if policy.squash_output:
+            action = policy.unscale_action(action)
+        else:
+            action = np.clip(action, policy.action_space.low, policy.action_space.high)
+    if not vectorized:
+        action = action.squeeze(axis=0)
+        means = means.squeeze(0)
+        standard_deviations = standard_deviations.squeeze(0)
+
+    def arrays(state: tuple[torch.Tensor, torch.Tensor]) -> tuple[np.ndarray, np.ndarray]:
+        return tuple(item.detach().cpu().numpy() for item in state)  # type: ignore[return-value]
+
+    return DiagnosticPrediction(
+        action=np.asarray(action, dtype=np.float32),
+        recurrent_state=RecurrentDiagnosticState(
+            actor=arrays(next_states.pi), critic=arrays(next_states.vf)
+        ),
+        value_estimate=float(values.reshape(-1)[0].cpu()),
+        action_log_probability=float(log_probabilities.reshape(-1)[0].cpu()),
+        action_mean=np.asarray(means.cpu(), dtype=np.float32),
+        action_std=np.asarray(standard_deviations.cpu(), dtype=np.float32),
+    )
 
 
 class DecisionLogger:

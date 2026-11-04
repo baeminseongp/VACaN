@@ -1,0 +1,57 @@
+schema_version: 1
+scenario: office
+world_frame: isaac_world_enu
+stage6_config: ../stage6/office.yaml
+stage6_artifact: ../../reproduction/office/stage6/matched-seed15101
+policy_checkpoint: ../../checkpoints/stage5/office/recurrent_ppo.zip
+policy: {frozen: true, inference: deterministic}
+seed: 15101
+comparison_tolerance: 1.0e-6
+grid:
+  origin_xy: [-12.0, -12.0]
+  size_xy: [24.0, 24.0]
+  resolution_m: 4.0
+interventions:
+  - id: full_congestion
+    factor: congestion
+    type: full_information
+    start_time_s: 0.0
+    end_time_s: 120.0
+    scope: {}
+    measurement_convention: full_grid_count
+  - id: full_intention
+    factor: intention
+    type: full_information
+    start_time_s: 0.0
+    end_time_s: 120.0
+    ground_truth_reference: pegasus_controller_current_destination
+  - id: congestion_injected_error_3_3
+    factor: congestion
+    type: overestimate
+    start_time_s: 0.0
+    end_time_s: 0.0
+    scope: {cells: [[3, 3]]}
+    delta: 3
+  - id: intention_injected_error_office_02
+    factor: intention
+    type: incorrect_destination
+    start_time_s: 0.0
+    end_time_s: 0.0
+    pedestrian_id: office_02
+    destination_grid: [2, 2]
+  - id: no_op
+    factor: congestion
+    type: no_op
+    start_time_s: 0.0
+    end_time_s: 120.0
+    scope: {}
+experiments:
+  - id: full_information
+    intervention_ids: [full_congestion, full_intention]
+  - id: congestion_error
+    intervention_ids: [full_congestion, full_intention, congestion_injected_error_3_3]
+  - id: intention_error
+    intervention_ids: [full_congestion, full_intention, intention_injected_error_office_02]
+  - id: combined_error
+    intervention_ids: [full_congestion, full_intention, congestion_injected_error_3_3, intention_injected_error_office_02]
+  - {id: no_op, intervention_ids: [no_op]}

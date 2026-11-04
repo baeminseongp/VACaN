@@ -1,0 +1,44 @@
+schema_version: 1
+scenario: office
+world_frame: isaac_world_enu
+stage2_config: ../stage2/office.yaml
+stage4_config: ../stage4/office.yaml
+stage5_config: ../stage5/recurrent_ppo.yaml
+static_map: ../../reproduction/office/stage4/occupancy_2d.npz
+policy_checkpoint: ../../checkpoints/stage5/office/recurrent_ppo.zip
+policy:
+  inference: deterministic
+  frozen: true
+  phase: partial_coverage_noise
+reference:
+  algorithm: time_expanded_astar_constant_velocity
+  uses_ground_truth_current_state: true
+  uses_actual_future_trajectory: false
+  time_step_s: 0.8
+  horizon_s: 40.0
+  pedestrian_radius_m: 0.8
+  replan_interval_s: 1.0
+  cruise_speed_m_s: 0.5
+  angular_gain: 1.8
+  waypoint_tolerance_m: 0.25
+shared_cost:
+  weights:
+    time: 1.0
+    length: 2.0
+    collision: 50.0
+    social: 10.0
+    smoothness: 0.1
+    terminal_failure: 1.0
+  personal_space_m: 0.8
+  terminal_failure_penalty: 120.0
+  normalization: {max_linear_m_s: 0.6, max_angular_rad_s: 1.0}
+comparison:
+  inefficiency_tolerance: 1.0e-6
+  divergence_distance_m: 0.75
+  angular_action_change_rad_s: 0.5
+evaluation:
+  validation_seeds: [15101]
+  test_seeds: [25101]
+  matched_episodes: 1
+  control_hz: 5.0
+  collision_termination: true

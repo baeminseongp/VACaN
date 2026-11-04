@@ -9,7 +9,12 @@ import pytest
 import torch
 from sb3_contrib import RecurrentPPO
 
-from vacan.rl.stage5 import VacanFeatureExtractor, predict_deterministic, recurrent_policy_kwargs
+from vacan.rl.stage5 import (
+    VacanFeatureExtractor,
+    predict_deterministic,
+    predict_deterministic_with_diagnostics,
+    recurrent_policy_kwargs,
+)
 from vacan.rl.stage5_config import load_stage5_config
 from vacan.rl.curriculum import resolve_pedestrian_population
 from vacan.rl.policy_registry import (
@@ -129,6 +134,35 @@ def test_recurrent_forward_hidden_reset_and_reload(config, tmp_path):
     actual = predict_deterministic(loaded, observation, None, True)
     assert np.allclose(expected.action, actual.action)
     assert np.isfinite(np.asarray(model.logger.name_to_value.get("train/loss", 0.0))).all()
+
+
+def test_diagnostic_prediction_matches_deterministic_action_and_tracks_critic(config):
+    env = TinyVacanEnv()
+    model = RecurrentPPO(
+        "MultiInputLstmPolicy", env, n_steps=8, batch_size=4, n_epochs=1,
+        learning_rate=1e-4, policy_kwargs=recurrent_policy_kwargs(config),
+        seed=23, device="cpu", verbose=0,
+    )
+    observation, _ = env.reset(seed=23)
+    baseline = predict_deterministic(model, observation, None, True)
+    diagnostic = predict_deterministic_with_diagnostics(model, observation, None, True)
+    assert np.allclose(diagnostic.action, baseline.action)
+    assert diagnostic.action_mean.shape == (2,)
+    assert diagnostic.action_std.shape == (2,)
+    assert np.all(diagnostic.action_std > 0)
+    assert np.isfinite(diagnostic.value_estimate)
+    assert np.isfinite(diagnostic.action_log_probability)
+    assert diagnostic.recurrent_state.actor[0].shape == (1, 1, 128)
+    assert diagnostic.recurrent_state.critic[0].shape == (1, 1, 128)
+
+    continued = predict_deterministic_with_diagnostics(
+        model, observation, diagnostic.recurrent_state, False
+    )
+    reset = predict_deterministic_with_diagnostics(
+        model, observation, continued.recurrent_state, True
+    )
+    assert np.allclose(reset.action, diagnostic.action)
+    assert np.isclose(reset.value_estimate, diagnostic.value_estimate)
 
 
 def test_environment_specific_policy_metadata_rejects_cross_environment(tmp_path):

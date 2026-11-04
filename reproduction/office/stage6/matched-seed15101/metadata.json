@@ -1,0 +1,26 @@
+{
+  "episode_id": "office-15101",
+  "matched_initial_pedestrian_max_error_m": 0.0,
+  "matched_initial_pedestrian_velocity_max_error_m_s": 0.0,
+  "matched_initial_robot_error_m": 0.0,
+  "matched_initial_robot_velocity_error_m_s": 0.0,
+  "pedestrian_count": 12,
+  "policy_checkpoint": "/home/engineer/VACaN/artifacts/stage5/train-office-partial_coverage_noise-seed5101-20261102T071023Z/policy-latest.zip",
+  "policy_checkpoint_sha256": "d53598a14f636f2303d01da727f5204dc053135be1c5d3b1c46fc39da5408b30",
+  "policy_frozen": true,
+  "policy_inference": "deterministic",
+  "policy_metadata": {
+    "parent_checkpoint": "/home/engineer/VACaN/artifacts/stage5/train-office-dynamic_crowd-seed5101-20261102T062326Z/policy-latest.zip",
+    "policy_scope": "single_environment",
+    "scenario": "office",
+    "source": "/home/engineer/VACaN/artifacts/stage5/train-office-partial_coverage_noise-seed5101-20261102T071023Z/summary.json"
+  },
+  "reference_algorithm": "time_expanded_astar_constant_velocity",
+  "reference_uses_actual_future_trajectory": false,
+  "scenario": "office",
+  "schema_version": 1,
+  "seed": 15101,
+  "static_map": "/home/engineer/VACaN/artifacts/stage4/office/occupancy_2d.npz",
+  "static_map_sha256": "28918232b1097de684e857e4cec9082c948c50792497b4f15e76151ffef5ef1b",
+  "world_frame": "isaac_world_enu"
+}

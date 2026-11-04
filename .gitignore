@@ -20,6 +20,11 @@ data/interim/*
 data/processed/*
 artifacts/*
 !artifacts/.gitkeep
+!artifacts/stage1-isaac/
+!artifacts/stage1-isaac/**/resolved_routes.json
+
+# Curated policy and minimum replay inputs are versioned under checkpoints/
+# and reproduction/ with Git LFS. Raw training/simulation runs remain ignored.
 
 # Generated experiment outputs and secrets
 experiments/outputs/*

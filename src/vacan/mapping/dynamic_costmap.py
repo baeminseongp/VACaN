@@ -1,5 +1,4 @@
 """Deterministic Stage 3 CCTV/robot/intention dynamic costmap."""
-
 from __future__ import annotations
 
 import math
@@ -87,7 +86,8 @@ def load_stage3_config(path: Path) -> dict[str, Any]:
 class DynamicCostmap:
     """Grid costmap whose policy view never contains privileged GT layers."""
 
-    def __init__(self, config: dict[str, Any], seed: int) -> None:
+    def __init__(self, config: dict[str, Any], seed: int,
+                 intervention_manager: Any | None = None) -> None:
         grid = config["grid"]
         self.geometry = GridGeometry(
             tuple(map(float, grid["origin_xy"])),
@@ -134,6 +134,8 @@ class DynamicCostmap:
         self.tracks: dict[str, IntentionTrack] = {}
         self.initialized = False
         self.cctv_mean = 0.0
+        # Optional Stage 7 hook. None preserves the validated Stage 3 path.
+        self.intervention_manager = intervention_manager
 
     def _mask(self, cells: set[Cell]) -> list[list[bool]]:
         return [
@@ -288,7 +290,8 @@ class DynamicCostmap:
             })
         return observations
 
-    def _direct_updates(self, observations: list[dict[str, Any]], now: float) -> None:
+    def _direct_updates(self, observations: list[dict[str, Any]], now: float,
+                        count_overrides: dict[Cell, float] | None = None) -> None:
         counts: dict[Cell, int] = {}
         for observation in observations:
             cell = tuple(observation["observed_grid"])
@@ -296,9 +299,11 @@ class DynamicCostmap:
         for row in range(self.rows):
             for column in range(self.columns):
                 cell = (row, column)
-                if cell in self.cctv_cells or not self.visibility_mask[row][column]:
+                if cell in self.cctv_cells or (
+                        not self.visibility_mask[row][column]
+                        and cell not in (count_overrides or {})):
                     continue
-                value = float(counts.get(cell, 0))
+                value = float((count_overrides or {}).get(cell, counts.get(cell, 0)))
                 self.current_cost[row][column] = value
                 self.anchor_cost[row][column] = value
                 self.anchor_timestamp[row][column] = now
@@ -306,7 +311,10 @@ class DynamicCostmap:
                 self.freshness[row][column] = 1.0
                 self.last_update_type[row][column] = "robot_observation"
 
-    def _intentions(self, observations: list[dict[str, Any]], now: float) -> list[dict[str, Any]]:
+    def _intentions(self, observations: list[dict[str, Any]], now: float,
+                    intervention_manager: Any | None = None,
+                    pedestrians: list[dict[str, Any]] | None = None) \
+            -> tuple[list[dict[str, Any]], list[dict[str, Any]]] | list[dict[str, Any]]:
         horizon = float(self.config["intention"]["prediction_horizon_s"])
         confirmation = int(self.config["intention"]["transition_confirmation_ticks"])
         events = []
@@ -339,10 +347,23 @@ class DynamicCostmap:
                     emit = True
             if not emit or destination in self.cctv_cells:
                 continue
-            row, column = destination
-            self.intention_incoming[row][column] += 1
-            event = {"pedestrian_id": observation["id"], "destination_grid": list(destination)}
+            event = {
+                "event_id": f"{observation['id']}:{destination[0]},{destination[1]}:{now:.6f}",
+                "pedestrian_id": observation["id"], "destination_grid": list(destination),
+                "contribution": 1, "source": "stage3_prediction",
+            }
             events.append(event)
+        intervention_logs: list[dict[str, Any]] = []
+        if intervention_manager is not None:
+            events, intervention_logs = intervention_manager.modify_intentions(
+                now, events, observations, pedestrians
+            )
+        for event in events:
+            destination = tuple(event["destination_grid"])
+            if destination in self.cctv_cells:
+                continue
+            row, column = destination
+            self.intention_incoming[row][column] += int(event.get("contribution", 1))
         for row in range(self.rows):
             for column in range(self.columns):
                 incoming = self.intention_incoming[row][column]
@@ -356,7 +377,9 @@ class DynamicCostmap:
                 self.last_update_type[row][column] = (
                     "robot_observation+intention" if previous == "robot_observation" else "intention"
                 )
-        return events
+        if intervention_manager is None:
+            return events
+        return events, intervention_logs
 
     def tick(
         self, simulation_time_s: float, robot: dict[str, Any], pedestrians: list[dict[str, Any]]
@@ -370,8 +393,21 @@ class DynamicCostmap:
             self._initialize_non_cctv(simulation_time_s)
         self._decay(simulation_time_s)
         observations = self._observe(robot, pedestrians)
-        self._direct_updates(observations, simulation_time_s)
-        events = self._intentions(observations, simulation_time_s)
+        congestion_logs: list[dict[str, Any]] = []
+        overrides: dict[Cell, float] = {}
+        if self.intervention_manager is not None:
+            overrides, congestion_logs = self.intervention_manager.modify_congestion(
+                simulation_time_s, observations, self.visibility_mask, ground_truth
+            )
+        self._direct_updates(observations, simulation_time_s, overrides)
+        intention_result = self._intentions(
+            observations, simulation_time_s, self.intervention_manager, pedestrians
+        )
+        if self.intervention_manager is None:
+            events = intention_result
+            intention_logs: list[dict[str, Any]] = []
+        else:
+            events, intention_logs = intention_result
         self._advance_schedule(simulation_time_s)
         return {
             "policy": {
@@ -393,6 +429,7 @@ class DynamicCostmap:
                 "freshness": [row[:] for row in self.freshness],
                 "intention_incoming_count": [row[:] for row in self.intention_incoming],
                 "last_update_type": [row[:] for row in self.last_update_type],
+                "intervention_events": congestion_logs + intention_logs,
             },
             "privileged": {"ground_truth_count": ground_truth},
         }
