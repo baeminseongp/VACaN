@@ -332,11 +332,13 @@ The repository contains the selected policy, Office occupancy map, and minimum
 matched Stage 6 records required for host decision replay:
 
 ```bash
-git lfs install
-git lfs pull
 .venv/bin/python scripts/analyze_stage7_office_decisions.py \
   --output artifacts/stage7/office/decision
 ```
+
+It also contains every retained Stage 7 Office run under
+`artifacts/stage7/`. These include intermediate, superseded experiment designs;
+read `artifacts/stage7/README.md` before treating a run as scientific evidence.
 
 The full closed-loop Isaac Sim rerun additionally requires Isaac Sim 5.1,
 Isaac Lab 2.3.2, Pegasus 5.1, and access to the official NVIDIA assets:
@@ -346,6 +348,6 @@ Isaac Lab 2.3.2, Pegasus 5.1, and access to the official NVIDIA assets:
   --seed 15101 --gpu 1 --headless
 ```
 
-See `docs/stage-7-report.md`. The redesigned Case 1-2 and Case 2 closed-loop
-run remains pending; negative results are preserved rather than relabeled as
-failures. Stage 8 has not started.
+See `docs/stage-7-report.md`. The latest redesigned closed-loop run completed,
+but Case 1-2 and Case 2 produced negative cost deltas; those outcomes are
+preserved rather than relabeled as failures. Stage 8 has not started.

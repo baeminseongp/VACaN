@@ -1,0 +1,18 @@
+{
+  "files": {
+    "analysis": "analysis-summary.json",
+    "branch_trajectories": "episode/branch-trajectories.npz",
+    "decision_metadata": "decision/decision-results.json",
+    "episode_metadata": "episode/episode-results.json",
+    "policy_representations": "decision/policy-representations.npz",
+    "query_index": "spatiotemporal-index.jsonl"
+  },
+  "large_static_maps_duplicated": false,
+  "policy_checkpoint": "/home/engineer/VACaN/checkpoints/stage5/office/recurrent_ppo.zip",
+  "scenario": "office",
+  "schema_version": 1,
+  "simulator_required_to_load": false,
+  "static_map_reference": "artifacts/stage4/office/occupancy_2d.npz",
+  "tabular_format": "JSONL (PyArrow is not installed in the verified VACaN environment)",
+  "world_frame": "isaac_world_enu"
+}

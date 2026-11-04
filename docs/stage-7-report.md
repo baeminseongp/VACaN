@@ -8,11 +8,14 @@ intention-induced freshness error under partial coverage, and a
 normal-DRL comparison against stuck/oscillating behavior from the same frozen
 policy. The Stage 6 reference planner remains an auxiliary comparator.
 
-Stage 7 is **in progress**. Host-side decision replay and unit tests pass for
-the new design. The closed-loop Isaac Sim case-study run must be executed again
-before the redesigned experiment can be marked verified. Hospital and
-Warehouse are outside the currently authorized Stage 7 scope, and Stage 8 has
-not started.
+Stage 7 is **in progress**. Host-side decision replay and unit tests pass, and
+the latest redesigned closed-loop Isaac Sim run
+(`run-seed15101-20261104T122140Z`) completed with launcher status `pass` and
+no-op trajectory equality. Case 1-1 and Case 3 show the intended inefficiency
+or failure direction. Case 1-2 and Case 2 diverge but have negative cost deltas,
+so they are retained as negative results and still require redesign or a
+predeclared broader seed evaluation. Hospital and Warehouse are outside the
+currently authorized Stage 7 scope, and Stage 8 has not started.
 
 ## 1. Experimental question
 
@@ -209,8 +212,9 @@ Repository packaging added for reproducibility:
 - `checkpoints/README.md`
 - `checkpoints/stage5/office/{recurrent_ppo.zip,metadata.yaml}`
 
-`.pt`, `.pth`, `.safetensors`, and curated checkpoint ZIP files are managed by
-Git LFS. Generated experiment outputs remain ignored under `artifacts/`.
+The curated checkpoint, minimum reproduction inputs, and complete retained
+Office Stage 7 archive are versioned as ordinary Git files. Other generated
+experiment outputs remain ignored.
 
 ## 7. Commands and current validation
 
@@ -220,7 +224,7 @@ Host validation:
 .venv/bin/python -m pytest -q
 .venv/bin/python scripts/analyze_stage7_office_decisions.py \
   --output /tmp/vacan-stage7-full-decision
-git lfs ls-files
+git status --short
 ```
 
 Required closed-loop rerun for the redesigned comparison:
@@ -240,16 +244,16 @@ superseded 2026-11-03 correction experiment:
 
 ## 8. Generated assets and artifacts
 
-The host replay currently writes eight experiment records, compressed policy
+The host replay writes experiment records, compressed policy
 representations, provenance logs, and decision figures to the requested output
-directory. A physical run will additionally write per-branch policy and
+directory. A physical run additionally writes per-branch policy and
 privileged trajectories, intervention JSONL, episode costs, trajectory arrays,
 spatial-temporal query indexes, and figures.
 
-The previous artifact
-`artifacts/stage7/office/run-seed15101-20261103T160240Z` belongs to the
-superseded correction design. It must not be reported as evidence for this
-case-study experiment.
+All six retained timestamped runs and the standalone host decision replay are
+archived in the release repository. The earlier runs are superseded experiment
+designs and must not be reported as evidence for the latest case-study design.
+See `artifacts/stage7/README.md` for provenance and interpretation guidance.
 
 ## 9. Known limitations and acceptance status
 
@@ -270,6 +274,6 @@ The code marks a case as a candidate only when the erroneous/comparison branch
 has higher shared cost and its path or outcome diverges. Otherwise it preserves
 the result as negative; path differences are never fabricated.
 
-Stage 7 must not be marked complete until the redesigned physical run passes,
-the no-op equality check passes, all configured branches are evaluated with the
-shared cost, and the report is updated with actual closed-loop results.
+The latest physical run and structural checks pass, but Stage 7 must not be
+marked complete while Case 1-2 and Case 2 fail to demonstrate the predeclared
+positive inefficiency direction on the evaluated seed.

@@ -1,0 +1,311 @@
+{
+  "branches": [
+    {
+      "branch_id": "original",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.540204979596864,
+        "smoothness": 14.78872619867325,
+        "social_violation_integral_s": 0.2830775212125833,
+        "terminal_failure": 0.0,
+        "total": 25.356724457853552,
+        "travel_time_s": 9.966666666666667,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.080409959193728,
+        "weighted_smoothness": 1.4788726198673252,
+        "weighted_social": 2.830775212125833,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 9.966666666666667
+      },
+      "delta_j_cf": 0.0,
+      "intervention_event_count": 0,
+      "intervention_ids": [],
+      "reset_max_error": 0.0,
+      "steps": 50,
+      "success": true
+    },
+    {
+      "branch_id": "congestion_error",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.540204979596864,
+        "smoothness": 14.78872619867325,
+        "social_violation_integral_s": 0.2830775212125833,
+        "terminal_failure": 0.0,
+        "total": 25.356724457853552,
+        "travel_time_s": 9.966666666666667,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.080409959193728,
+        "weighted_smoothness": 1.4788726198673252,
+        "weighted_social": 2.830775212125833,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 9.966666666666667
+      },
+      "delta_j_cf": 0.0,
+      "intervention_event_count": 1,
+      "intervention_ids": [
+        "congestion_overestimate_3_3"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 50,
+      "success": true
+    },
+    {
+      "branch_id": "congestion_correction",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.697622821740396,
+        "smoothness": 15.061828708648687,
+        "social_violation_integral_s": 0.302466881752732,
+        "terminal_failure": 0.0,
+        "total": 26.17609733187298,
+        "travel_time_s": 10.25,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.395245643480791,
+        "weighted_smoothness": 1.5061828708648688,
+        "weighted_social": 3.02466881752732,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 10.25
+      },
+      "delta_j_cf": 0.8193728740194288,
+      "intervention_event_count": 1,
+      "intervention_ids": [
+        "congestion_gt_correction_3_3"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 52,
+      "success": true
+    },
+    {
+      "branch_id": "intention_error",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.729007807527583,
+        "smoothness": 15.061097788810734,
+        "social_violation_integral_s": 0.2985132700819453,
+        "terminal_failure": 0.0,
+        "total": 26.24925809475569,
+        "travel_time_s": 10.3,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.458015615055166,
+        "weighted_smoothness": 1.5061097788810736,
+        "weighted_social": 2.985132700819453,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 10.3
+      },
+      "delta_j_cf": 0.8925336369021366,
+      "intervention_event_count": 1,
+      "intervention_ids": [
+        "intention_wrong_office_02"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 52,
+      "success": true
+    },
+    {
+      "branch_id": "intention_correction",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.818322389047971,
+        "smoothness": 14.964631116390231,
+        "social_violation_integral_s": 0.29573594645471724,
+        "terminal_failure": 0.0,
+        "total": 26.573800687615474,
+        "travel_time_s": 10.483333333333333,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.636644778095942,
+        "weighted_smoothness": 1.4964631116390232,
+        "weighted_social": 2.9573594645471726,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 10.483333333333333
+      },
+      "delta_j_cf": 1.217076229761922,
+      "intervention_event_count": 1,
+      "intervention_ids": [
+        "intention_realized_correction_office_02"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 53,
+      "success": true
+    },
+    {
+      "branch_id": "combined",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.355407722810418,
+        "smoothness": 14.474569261074068,
+        "social_violation_integral_s": 0.31297656221806197,
+        "terminal_failure": 0.0,
+        "total": 24.938037993908864,
+        "travel_time_s": 9.65,
+        "weighted_collision": 0.0,
+        "weighted_length": 10.710815445620836,
+        "weighted_smoothness": 1.4474569261074068,
+        "weighted_social": 3.12976562218062,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 9.65
+      },
+      "delta_j_cf": -0.4186864639446881,
+      "intervention_event_count": 2,
+      "intervention_ids": [
+        "congestion_gt_correction_3_3",
+        "intention_realized_correction_office_02"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 49,
+      "success": true
+    },
+    {
+      "branch_id": "no_op",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.540204979596864,
+        "smoothness": 14.78872619867325,
+        "social_violation_integral_s": 0.2830775212125833,
+        "terminal_failure": 0.0,
+        "total": 25.356724457853552,
+        "travel_time_s": 9.966666666666667,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.080409959193728,
+        "weighted_smoothness": 1.4788726198673252,
+        "weighted_social": 2.830775212125833,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 9.966666666666667
+      },
+      "delta_j_cf": 0.0,
+      "full_trajectory_equal": true,
+      "intervention_event_count": 0,
+      "intervention_ids": [
+        "no_op"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 50,
+      "success": true
+    }
+  ],
+  "created_utc": "2026-11-03T16:05:40.802530+00:00",
+  "elapsed_wall_s": 166.38110010896344,
+  "interventions": [
+    {
+      "cells": [
+        [
+          3,
+          3
+        ]
+      ],
+      "delta": 3.0,
+      "destination_grid": null,
+      "end_time_s": 2.2,
+      "event_id": null,
+      "factor": "congestion",
+      "ground_truth_reference": null,
+      "intervention_id": "congestion_overestimate_3_3",
+      "intervention_type": "overestimate",
+      "measurement_convention": null,
+      "pedestrian_id": null,
+      "start_time_s": 2.2,
+      "value": null
+    },
+    {
+      "cells": [
+        [
+          3,
+          3
+        ]
+      ],
+      "delta": null,
+      "destination_grid": null,
+      "end_time_s": 2.2,
+      "event_id": null,
+      "factor": "congestion",
+      "ground_truth_reference": null,
+      "intervention_id": "congestion_gt_correction_3_3",
+      "intervention_type": "ground_truth_correction",
+      "measurement_convention": "full_grid_count",
+      "pedestrian_id": null,
+      "start_time_s": 2.2,
+      "value": null
+    },
+    {
+      "cells": [],
+      "delta": null,
+      "destination_grid": [
+        2,
+        2
+      ],
+      "end_time_s": 2.2,
+      "event_id": null,
+      "factor": "intention",
+      "ground_truth_reference": null,
+      "intervention_id": "intention_wrong_office_02",
+      "intervention_type": "incorrect_destination",
+      "measurement_convention": null,
+      "pedestrian_id": "office_02",
+      "start_time_s": 2.2,
+      "value": null
+    },
+    {
+      "cells": [],
+      "delta": null,
+      "destination_grid": [
+        3,
+        2
+      ],
+      "end_time_s": 2.2,
+      "event_id": null,
+      "factor": "intention",
+      "ground_truth_reference": "privileged_realized_destination_at_t4.8_horizon_2.6s",
+      "intervention_id": "intention_realized_correction_office_02",
+      "intervention_type": "ground_truth_correction",
+      "measurement_convention": null,
+      "pedestrian_id": "office_02",
+      "start_time_s": 2.2,
+      "value": null
+    },
+    {
+      "cells": [],
+      "delta": null,
+      "destination_grid": null,
+      "end_time_s": 2.2,
+      "event_id": null,
+      "factor": "congestion",
+      "ground_truth_reference": null,
+      "intervention_id": "no_op",
+      "intervention_type": "no_op",
+      "measurement_convention": null,
+      "pedestrian_id": null,
+      "start_time_s": 2.2,
+      "value": null
+    }
+  ],
+  "pedestrian_count": 12,
+  "pedestrians_react_to_robot": false,
+  "policy_checkpoint": "/home/engineer/VACaN/artifacts/stage5/train-office-partial_coverage_noise-seed5101-20261102T071023Z/policy-latest.zip",
+  "policy_frozen": true,
+  "replay_semantics": "closed_loop_physical_matched_reset",
+  "scope": "office_only",
+  "seed": 15101,
+  "shared_cost_config": {
+    "normalization": {
+      "max_angular_rad_s": 1.0,
+      "max_linear_m_s": 0.6
+    },
+    "personal_space_m": 0.8,
+    "terminal_failure_penalty": 120.0,
+    "weights": {
+      "collision": 50.0,
+      "length": 2.0,
+      "smoothness": 0.1,
+      "social": 10.0,
+      "terminal_failure": 1.0,
+      "time": 1.0
+    }
+  },
+  "status": "pass"
+}

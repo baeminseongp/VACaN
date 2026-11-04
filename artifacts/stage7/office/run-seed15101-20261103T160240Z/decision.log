@@ -1,0 +1,4 @@
+/home/engineer/VACaN/.venv/lib/python3.11/site-packages/stable_baselines3/common/save_util.py:167: UserWarning: Could not deserialize object _last_lstm_states. Consider using `custom_objects` argument to replace this object.
+Exception: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.
+  warnings.warn(
+{"experiments": 6, "output": "/home/engineer/VACaN/artifacts/stage7/office/run-seed15101-20261103T160240Z/decision", "status": "pass"}

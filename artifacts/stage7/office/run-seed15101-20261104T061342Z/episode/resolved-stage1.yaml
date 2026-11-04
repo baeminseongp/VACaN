@@ -1,0 +1,238 @@
+schema_version: 3
+backend: isaac-sim-pegasus
+scenario:
+  name: office
+  description: Multiple bidirectional routes cross the official office's open central
+    area.
+environment:
+  kind: office
+  pegasus_name: Office
+  asset: Isaac/Environments/Office/office.usd
+  prim_path: /World/Environment
+episode:
+  physics_dt_s: 0.03333333333333333
+  rendering_dt_s: 0.03333333333333333
+  steps: 360
+  warmup_steps: 8
+navmesh:
+  volume_center:
+  - 0.0
+  - 0.0
+  - 2.0
+  volume_size:
+  - 40.0
+  - 40.0
+  - 6.0
+  agent_radius_m: 0.35
+  agent_min_height_m: 1.5
+  agent_max_step_height_m: 0.25
+  agent_max_floor_slope_deg: 45.0
+  min_island_radius_m: 1.0
+  max_spawn_snap_m: 3.0
+pedestrian_controller:
+  waypoint_tolerance_m: 0.35
+  lookahead_m: 1.0
+  separation_radius_m: 1.0
+  separation_gain: 0.35
+  max_lateral_offset_m: 0.35
+  route_selection: seeded_round_robin
+ground_truth:
+  world_frame: isaac_world_enu
+  grid:
+    origin_xy:
+    - -12.0
+    - -12.0
+    size_xy:
+    - 24.0
+    - 24.0
+    resolution_m: 0.5
+  congestion_zones:
+    open_area:
+    - -3.0
+    - -3.0
+    - 3.0
+    - 3.0
+visualization:
+  bounds_xy:
+  - -12.0
+  - 12.0
+  - -12.0
+  - 12.0
+seeds:
+  train:
+  - 1101
+  - 1102
+  - 1103
+  validation:
+  - 11101
+  test:
+  - 21101
+pedestrians:
+- id: office_00
+  character: F_Business_02
+  spawn:
+  - -7.0
+  - -2.0
+  - 0.0
+  destinations:
+  - - 7.0
+    - 2.0
+    - 0.0
+  - - -7.0
+    - -2.0
+    - 0.0
+  speed_m_s: 1.15
+- id: office_01
+  character: F_Business_02
+  spawn:
+  - -7.0
+  - 2.0
+  - 0.0
+  destinations:
+  - - 7.0
+    - -2.0
+    - 0.0
+  - - -7.0
+    - 2.0
+    - 0.0
+  speed_m_s: 1.05
+- id: office_02
+  character: F_Medical_01
+  spawn:
+  - 7.0
+  - -1.0
+  - 0.0
+  destinations:
+  - - -7.0
+    - 1.0
+    - 0.0
+  - - 7.0
+    - -1.0
+    - 0.0
+  speed_m_s: 0.95
+- id: office_03
+  character: F_Medical_01
+  spawn:
+  - 7.0
+  - 2.5
+  - 0.0
+  destinations:
+  - - -7.0
+    - -1.5
+    - 0.0
+  - - 7.0
+    - 2.5
+    - 0.0
+  speed_m_s: 1.1
+- id: office_04
+  character: M_Medical_01
+  spawn:
+  - -2.0
+  - -7.0
+  - 0.0
+  destinations:
+  - - 2.0
+    - 7.0
+    - 0.0
+  - - -2.0
+    - -7.0
+    - 0.0
+  speed_m_s: 1.0
+- id: office_05
+  character: M_Medical_01
+  spawn:
+  - 2.0
+  - 7.0
+  - 0.0
+  destinations:
+  - - -2.0
+    - -7.0
+    - 0.0
+  - - 2.0
+    - 7.0
+    - 0.0
+  speed_m_s: 1.0
+- id: office_06
+  character: F_Business_02
+  spawn:
+  - -5.688957691192627
+  - 2.4294166564941406
+  - -1.5178962087247783e-07
+  destinations:
+  - - 7.0
+    - 2.0
+    - 0.0
+  - - -7.0
+    - -2.0
+    - 0.0
+  speed_m_s: 1.15
+- id: office_07
+  character: F_Business_02
+  spawn:
+  - -2.0100278854370117
+  - 4.539798736572266
+  - -1.4412780302563988e-08
+  destinations:
+  - - 7.0
+    - -2.0
+    - 0.0
+  - - -7.0
+    - 2.0
+    - 0.0
+  speed_m_s: 1.05
+- id: office_08
+  character: F_Medical_01
+  spawn:
+  - -0.008032397367060184
+  - 2.4651389122009277
+  - 0.00358528271317482
+  destinations:
+  - - -7.0
+    - 1.0
+    - 0.0
+  - - 7.0
+    - -1.0
+    - 0.0
+  speed_m_s: 0.95
+- id: office_09
+  character: F_Medical_01
+  spawn:
+  - -3.3488881587982178
+  - 4.711467266082764
+  - 0.0
+  destinations:
+  - - -7.0
+    - -1.5
+    - 0.0
+  - - 7.0
+    - 2.5
+    - 0.0
+  speed_m_s: 1.1
+- id: office_10
+  character: M_Medical_01
+  spawn:
+  - -0.045171432197093964
+  - 1.6409302949905396
+  - 0.009553441777825356
+  destinations:
+  - - 2.0
+    - 7.0
+    - 0.0
+  - - -2.0
+    - -7.0
+    - 0.0
+  speed_m_s: 1.0
+- id: office_11
+  character: M_Medical_01
+  spawn:
+  - -1.2648154497146606
+  - -3.3051626682281494
+  - -4.76837158203125e-07
+  destinations:
+  - - -2.0
+    - -7.0
+    - 0.0
+  - - 2.0
+    - 7.0
+    - 0.0
+  speed_m_s: 1.0

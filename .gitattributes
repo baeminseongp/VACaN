@@ -1,7 +1,1 @@
-# Neural-network checkpoints are binary and must not enter normal Git history.
-*.pt filter=lfs diff=lfs merge=lfs -text
-*.pth filter=lfs diff=lfs merge=lfs -text
-*.safetensors filter=lfs diff=lfs merge=lfs -text
-checkpoints/**/*.zip filter=lfs diff=lfs merge=lfs -text
-reproduction/**/*.jsonl filter=lfs diff=lfs merge=lfs -text
-reproduction/**/*.npz filter=lfs diff=lfs merge=lfs -text
+# Release assets are intentionally stored as ordinary Git files.
