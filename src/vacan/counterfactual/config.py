@@ -35,6 +35,30 @@ def load_stage7_config(path: Path) -> dict[str, Any]:
         raise ValueError("at least one Stage 7 intervention is required")
     data["geometry"] = geometry
     data["parsed_interventions"] = specs
+    spec_ids = {item.intervention_id for item in specs}
+    experiments = data.get("experiments", [])
+    experiment_ids = [str(item.get("id")) for item in experiments]
+    if len(experiment_ids) != len(set(experiment_ids)):
+        raise ValueError("Stage 7 experiment identifiers must be unique")
+    available_branches = {"original", *experiment_ids}
+    for experiment in experiments:
+        unknown = set(experiment.get("intervention_ids", [])) - spec_ids
+        if unknown:
+            raise ValueError(f"{experiment['id']}: unknown interventions {sorted(unknown)}")
+        baseline = str(experiment.get("baseline_id", "original"))
+        if baseline not in available_branches or baseline == experiment["id"]:
+            raise ValueError(f"{experiment['id']}: invalid baseline_id {baseline}")
+    cases = data.get("case_studies", {})
+    required_cases = {"case_1", "case_2", "case_3"}
+    if set(cases) & required_cases != required_cases:
+        raise ValueError("Stage 7 requires case_studies.case_1, case_2, and case_3")
+    referenced = {
+        cases["case_1"].get("correct_branch"), cases["case_1"].get("error_branch"),
+        cases["case_2"].get("correct_branch"), cases["case_2"].get("error_branch"),
+        cases["case_3"].get("drl_branch"),
+    }
+    if not referenced <= available_branches:
+        raise ValueError(f"case studies reference unknown branches {sorted(referenced - available_branches)}")
     if float(data.get("comparison_tolerance", -1)) < 0:
         raise ValueError("comparison_tolerance must be non-negative")
     return data

@@ -83,7 +83,7 @@ def parse_intervention(raw: dict[str, Any], geometry: GridGeometry) -> Intervent
         raise ValueError("Stage 7 factor must be congestion or intention")
     supported = {
         "congestion": {"overestimate", "underestimate", "ground_truth_correction",
-                       "full_information", "no_op"},
+                       "full_information", "cctv_corruption", "no_op"},
         "intention": {"incorrect_destination", "missing", "spurious",
                       "ground_truth_correction", "full_information", "no_op"},
     }
@@ -117,8 +117,18 @@ class InterventionManager:
         if len(identifiers) != len(set(identifiers)):
             raise ValueError("intervention identifiers must be unique")
         for spec in specs:
-            if set(spec.cells) & cctv_cells and spec.intervention_type != "no_op":
+            cctv_targets = set(spec.cells) & cctv_cells
+            if cctv_targets and spec.intervention_type not in {"no_op", "cctv_corruption"}:
                 raise ValueError(f"{spec.intervention_id}: interventions cannot overwrite CCTV cells")
+            if spec.intervention_type == "cctv_corruption":
+                if not spec.cells or set(spec.cells) - cctv_cells:
+                    raise ValueError(
+                        f"{spec.intervention_id}: cctv_corruption must target only CCTV cells"
+                    )
+                if spec.measurement_convention != "counterfactual_cctv_corruption":
+                    raise ValueError(
+                        f"{spec.intervention_id}: CCTV corruption must be explicitly labeled"
+                    )
             if spec.factor == "congestion" and not spec.cells and spec.intervention_type not in {
                     "no_op", "full_information"}:
                 raise ValueError(f"{spec.intervention_id}: congestion intervention needs cells")
@@ -144,6 +154,48 @@ class InterventionManager:
         self._applied_once: set[str] = set()
         self._full_intention_destinations: dict[str, Cell] = {}
 
+    @staticmethod
+    def _corrupted_value(spec: InterventionSpec, original: float) -> float:
+        if spec.value is not None:
+            return max(0.0, float(spec.value))
+        magnitude = abs(float(spec.delta if spec.delta is not None else 1.0))
+        return max(0.0, original + magnitude)
+
+    def modify_cctv(self, now: float, exact_counts: list[list[int]]) \
+            -> tuple[list[list[float]], list[dict[str, Any]]]:
+        """Return policy-visible CCTV counts; privileged exact counts stay untouched.
+
+        CCTV remains exact in every normal branch. The only exception is an
+        explicitly configured counterfactual corruption used for robustness
+        analysis; it never mutates the simulator Ground Truth array.
+        """
+        visible = [[float(value) for value in row] for row in exact_counts]
+        tick_logs: list[dict[str, Any]] = []
+        for spec in self.specs:
+            if (spec.factor != "congestion" or spec.intervention_type != "cctv_corruption"
+                    or not spec.active(now)):
+                continue
+            for row, column in spec.cells:
+                original = float(exact_counts[row][column])
+                modified = self._corrupted_value(spec, original)
+                visible[row][column] = modified
+                tick_logs.append({
+                    "intervention_id": spec.intervention_id,
+                    "factor": "congestion",
+                    "type": "cctv_corruption",
+                    "simulation_time_s": float(now),
+                    "grid_cell": [row, column],
+                    "observation_source": "counterfactual_cctv",
+                    "exact_cctv_count": original,
+                    "modified_count": modified,
+                    "measurement_convention": "counterfactual_cctv_corruption",
+                    "resulting_costmap_delta": modified - original,
+                    "anchor_reset": True,
+                    "base_research_assumption_preserved": True,
+                })
+        self.logs.extend(copy.deepcopy(tick_logs))
+        return visible, tick_logs
+
     def modify_congestion(self, now: float, observations: list[dict[str, Any]],
                           visibility_mask: list[list[bool]],
                           ground_truth_counts: list[list[int]]) -> tuple[dict[Cell, float], list[dict[str, Any]]]:
@@ -155,6 +207,9 @@ class InterventionManager:
         tick_logs = []
         for spec in self.specs:
             if spec.factor != "congestion" or not spec.active(now) or spec.intervention_type == "no_op":
+                continue
+            if spec.intervention_type == "cctv_corruption":
+                # Applied before the CCTV mean is computed by modify_cctv().
                 continue
             if spec.intervention_type == "full_information":
                 affected = []
@@ -313,6 +368,19 @@ def decision_costmap_intervention(costmap: list[list[float]], diagnostics: dict[
                     if (row, column) not in (cctv_cells or set()):
                         result[row][column] = float(ground_truth[row][column])
             return result, [{"factor": "congestion", "type": "full_information"}]
+        if spec.intervention_type == "cctv_corruption":
+            visible_counts = diagnostics.get("cctv_counts", {})
+            for row, column in spec.cells:
+                key = f"{row},{column}"
+                original = float(visible_counts.get(key, ground_truth[row][column]))
+                modified = InterventionManager._corrupted_value(spec, original)
+                result[row][column] = modified
+                logs.append({
+                    "grid_cell": [row, column], "original": original,
+                    "modified": modified, "factor": "congestion",
+                    "type": "cctv_corruption",
+                })
+            return result, logs
         observations = diagnostics.get("observations", [])
         counts: dict[Cell, int] = {}
         for observation in observations:

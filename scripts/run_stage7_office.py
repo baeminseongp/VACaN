@@ -48,6 +48,13 @@ def main() -> None:
         raise SystemExit("choose at most one of --decision-only and --episode-only")
     config = load_stage7_config(args.config.resolve())
     stage6 = load_stage6_config(Path(config["resolved_stage6_config"]))
+    reference_metadata_path = Path(config["resolved_stage6_artifact"]) / "metadata.json"
+    reference_metadata = json.loads(reference_metadata_path.read_text(encoding="utf-8"))
+    if int(reference_metadata["seed"]) != args.seed:
+        raise SystemExit(
+            f"Stage 7 seed {args.seed} does not match the configured Stage 6 reference "
+            f"seed {reference_metadata['seed']}; generate/select a matched Stage 6 artifact"
+        )
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     run_dir = args.output / f"run-seed{args.seed}-{stamp}"
     environment = os.environ.copy()

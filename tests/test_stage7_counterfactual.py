@@ -9,6 +9,9 @@ import pytest
 from sb3_contrib import RecurrentPPO
 
 from vacan.counterfactual.config import load_stage7_config
+from vacan.counterfactual.case_studies import (
+    freshness_validity_metrics, paired_freshness_metrics, paired_trajectory_metrics,
+)
 from vacan.counterfactual.intervention import (
     InterventionManager, InterventionSpec, decision_costmap_intervention, resolve_scope,
 )
@@ -61,6 +64,7 @@ def test_stage7_office_config_has_exactly_two_factors_and_frozen_policy():
     assert value["scenario"] == "office"
     assert value["policy"]["frozen"] is True
     assert {item.factor for item in value["parsed_interventions"]} == {"congestion", "intention"}
+    assert {"case_1", "case_2", "case_3"} <= set(value["case_studies"])
 
 
 def test_scope_supports_cells_rectangle_and_polygon():
@@ -145,6 +149,42 @@ def test_intervention_cannot_overwrite_cctv():
                             geometry, {(0, 0)})
 
 
+def test_explicit_counterfactual_cctv_corruption_is_isolated_from_ground_truth():
+    geometry = GridGeometry((0, 0), (4, 4), 1)
+    item = InterventionSpec(
+        "cctv", "congestion", "cctv_corruption", 0, 1,
+        cells=((0, 0),), value=5,
+        measurement_convention="counterfactual_cctv_corruption",
+    )
+    manager = InterventionManager([item], geometry, {(0, 0)})
+    exact = [[0] * 4 for _ in range(4)]
+    exact[0][0] = 1
+    visible, logs = manager.modify_cctv(0, exact)
+    assert exact[0][0] == 1
+    assert visible[0][0] == 5
+    assert logs[0]["exact_cctv_count"] == 1
+    assert logs[0]["base_research_assumption_preserved"] is True
+
+
+def test_cctv_corruption_requires_cctv_only_scope_and_explicit_label():
+    geometry = GridGeometry((0, 0), (4, 4), 1)
+    with pytest.raises(ValueError, match="only CCTV"):
+        InterventionManager([
+            InterventionSpec(
+                "bad", "congestion", "cctv_corruption", 0, 1,
+                cells=((1, 1),), value=3,
+                measurement_convention="counterfactual_cctv_corruption",
+            )
+        ], geometry, {(0, 0)})
+    with pytest.raises(ValueError, match="explicitly labeled"):
+        InterventionManager([
+            InterventionSpec(
+                "bad", "congestion", "cctv_corruption", 0, 1,
+                cells=((0, 0),), value=3,
+            )
+        ], geometry, {(0, 0)})
+
+
 def test_intention_replacement_missing_and_spurious_are_event_aware():
     geometry = GridGeometry((0, 0), (4, 4), 1)
     original = [{"event_id": "p:1,2:0", "pedestrian_id": "p",
@@ -188,6 +228,50 @@ def test_decision_congestion_reconstruction_preserves_later_intention_addition()
                 convention="full_grid_count")
     modified, _ = decision_costmap_intervention(cost, diagnostics, truth, item)
     assert modified[1][2] == 5.0
+
+
+def test_case_study_trajectory_and_freshness_metrics_are_timestamp_aligned():
+    correct = [
+        {"simulation_time_s": 0.0, "position_xy_m": [0, 0], "action": [0, 0]},
+        {"simulation_time_s": 1.0, "position_xy_m": [1, 0], "action": [1, 0],
+         "goal_reached": True},
+    ]
+    error = [
+        {"simulation_time_s": 0.0, "position_xy_m": [0, 0], "action": [0, 0]},
+        {"simulation_time_s": 0.5, "position_xy_m": [0, 1], "action": [0, 1]},
+        {"simulation_time_s": 1.0, "position_xy_m": [0, 2], "action": [0, 1],
+         "goal_reached": False},
+    ]
+    metrics = paired_trajectory_metrics(
+        correct, error, trajectory_threshold_m=0.75, action_threshold_l2=0.05
+    )
+    assert metrics["path_difference_observed"] is True
+    assert metrics["first_spatial_divergence_time_s"] == 0.5
+    assert metrics["outcome_changed"] is True
+
+    def record(time, freshness):
+        return {
+            "simulation_time_s": time, "position_xy_m": [0, 0], "action": [0, 0],
+            "costmap_diagnostics": {
+                "freshness": [[freshness, 1.0], [1.0, 1.0]],
+                "anchor_timestamp": [[0.0, 0.0], [0.0, 0.0]],
+            },
+        }
+    correct_fresh = [record(0.0, 1.0), record(1.0, 0.5)]
+    error_fresh = [record(0.0, 1.0), record(1.0, 1.0)]
+    truth = [
+        {"simulation_time_s": 0.0, "ground_truth_density": [[0, 0], [0, 0]]},
+        {"simulation_time_s": 1.0, "ground_truth_density": [[2, 0], [0, 0]]},
+    ]
+    validity = freshness_validity_metrics(
+        error_fresh, truth, crowd_clip=2.0, cells=[[0, 0]]
+    )
+    assert validity["maximum_overestimation"] == 1.0
+    paired = paired_freshness_metrics(
+        correct_fresh, error_fresh, cells=[[0, 0]]
+    )
+    assert paired["maximum_l2"] == 0.5
+    assert paired["first_difference_time_s"] == 1.0
 
 
 class TinyEnv(gym.Env):

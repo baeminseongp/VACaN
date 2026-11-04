@@ -164,11 +164,11 @@ class DynamicCostmap:
                 counts[cell[0]][cell[1]] += 1
         return counts
 
-    def _update_cctv(self, counts: list[list[int]], now: float) -> dict[str, int]:
-        values: dict[str, int] = {}
+    def _update_cctv(self, counts: list[list[float]], now: float) -> dict[str, float]:
+        values: dict[str, float] = {}
         total = 0
         for row, column in sorted(self.cctv_cells):
-            count = int(counts[row][column])
+            count = float(counts[row][column])
             values[f"{row},{column}"] = count
             total += count
             self.current_cost[row][column] = float(count)
@@ -388,7 +388,18 @@ class DynamicCostmap:
             return None
         before = [row[:] for row in self.current_cost]
         ground_truth = self._ground_truth_counts(pedestrians)
-        cctv_counts = self._update_cctv(ground_truth, simulation_time_s)
+        cctv_input: list[list[float]] = [list(map(float, row)) for row in ground_truth]
+        cctv_logs: list[dict[str, Any]] = []
+        if self.intervention_manager is not None:
+            cctv_input, cctv_logs = self.intervention_manager.modify_cctv(
+                simulation_time_s, ground_truth
+            )
+        cctv_counts = self._update_cctv(cctv_input, simulation_time_s)
+        exact_cctv_counts = {
+            f"{row},{column}": int(ground_truth[row][column])
+            for row, column in sorted(self.cctv_cells)
+        }
+        exact_cctv_mean = sum(exact_cctv_counts.values()) / len(self.cctv_cells)
         if not self.initialized:
             self._initialize_non_cctv(simulation_time_s)
         self._decay(simulation_time_s)
@@ -419,6 +430,8 @@ class DynamicCostmap:
             },
             "diagnostics": {
                 "cctv_counts": cctv_counts, "cctv_mean": self.cctv_mean,
+                "cctv_ground_truth_counts": exact_cctv_counts,
+                "cctv_ground_truth_mean": exact_cctv_mean,
                 "observations": observations, "intention_events": events,
                 "robot_visibility_mask": self.visibility_mask,
                 "fov_overlap_ratio": self.overlap_ratio,
@@ -429,7 +442,7 @@ class DynamicCostmap:
                 "freshness": [row[:] for row in self.freshness],
                 "intention_incoming_count": [row[:] for row in self.intention_incoming],
                 "last_update_type": [row[:] for row in self.last_update_type],
-                "intervention_events": congestion_logs + intention_logs,
+                "intervention_events": cctv_logs + congestion_logs + intention_logs,
             },
             "privileged": {"ground_truth_count": ground_truth},
         }

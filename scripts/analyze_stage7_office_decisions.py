@@ -111,19 +111,22 @@ def main() -> None:
         for key, value in arrays.items():
             all_arrays[f"{experiment['id']}::{key}"] = value
     results_by_id = {item["experiment_id"]: item for item in results}
-    full_result = results_by_id["full_information"]
-    full_arrays = arrays_by_experiment["full_information"]
-    full_observation = observations_by_experiment["full_information"]
+    experiments_by_id = {item["id"]: item for item in config["experiments"]}
     for result in results:
         identifier = result["experiment_id"]
-        if identifier in {"full_information", "no_op"}:
+        baseline_id = experiments_by_id[identifier].get("baseline_id", "original")
+        if baseline_id == "original":
             baseline_output = result["original"]
             baseline_observation = snapshots_by_experiment[identifier].observation
+            baseline_arrays = arrays_by_experiment[identifier]
+            baseline_prefix = "original::"
             primary = result["differences"]
             baseline_name = "actual_drl"
         else:
-            baseline_output = full_result["counterfactual"]
-            baseline_observation = full_observation
+            baseline_output = results_by_id[baseline_id]["counterfactual"]
+            baseline_observation = observations_by_experiment[baseline_id]
+            baseline_arrays = arrays_by_experiment[baseline_id]
+            baseline_prefix = "counterfactual::"
             branch_output = result["counterfactual"]
             first_action = np.asarray(baseline_output["action"], dtype=float)
             second_action = np.asarray(branch_output["action"], dtype=float)
@@ -131,9 +134,9 @@ def main() -> None:
             second_hidden = np.asarray(branch_output["next_actor_hidden"], dtype=float)
             feature_metrics = {}
             branch_arrays = arrays_by_experiment[identifier]
-            for key in sorted(item.removeprefix("counterfactual::") for item in full_arrays
-                              if item.startswith("counterfactual::")):
-                first = full_arrays[f"counterfactual::{key}"]
+            for key in sorted(item.removeprefix(baseline_prefix) for item in baseline_arrays
+                              if item.startswith(baseline_prefix)):
+                first = baseline_arrays[f"{baseline_prefix}{key}"]
                 second = branch_arrays[f"counterfactual::{key}"]
                 difference = second.astype(np.float64) - first.astype(np.float64)
                 denominator = max(float(np.linalg.norm(first)), 1e-12)
@@ -149,13 +152,15 @@ def main() -> None:
                                       - baseline_output["critic_value"]),
                 "actor_hidden_l2": float(np.linalg.norm(second_hidden - first_hidden)),
                 "input_costmap_l2": float(np.linalg.norm(
-                    observations_by_experiment[identifier]["map"] - full_observation["map"])),
+                    observations_by_experiment[identifier]["map"]
+                    - baseline_observation["map"])),
                 "features": feature_metrics,
             }
-            baseline_name = "full_information_drl"
+            baseline_name = f"{baseline_id}_drl"
         result["differences_vs_actual"] = result["differences"]
         result["differences"] = primary
         result["primary_comparison_baseline"] = baseline_name
+        result["baseline_branch_id"] = baseline_id
         result["baseline_policy_output"] = baseline_output
         render_payload = {"original": baseline_output,
                           "counterfactual": result["counterfactual"],

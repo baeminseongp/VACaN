@@ -1,12 +1,13 @@
-# Stage 7 Report — Office Five-Way Frozen-Policy Comparison
+# Stage 7 Report — Office Frozen-Policy Case Studies
 
 Stage 7 has been redesigned around a single frozen Office Recurrent PPO policy.
-The primary experiment compares five information conditions; the Stage 6
-reference planner is retained only as an auxiliary efficiency comparison. This
-report supersedes the earlier injection-versus-correction interpretation.
+The implementation retains the five information conditions and adds the paired
+branches required for three case studies: counterfactual CCTV congestion
+corruption, intention-induced freshness error under partial coverage, and a
+full-information DRL comparison with the Stage 6 reference planner.
 
 Stage 7 is **in progress**. Host-side decision replay and unit tests pass for
-the new design. The closed-loop Isaac Sim five-way run must be executed again
+the new design. The closed-loop Isaac Sim case-study run must be executed again
 before the redesigned experiment can be marked verified. Hospital and
 Warehouse are outside the currently authorized Stage 7 scope, and Stage 8 has
 not started.
@@ -23,6 +24,14 @@ inference, and keep every policy parameter frozen:
 | Congestion-error DRL | injected congestion error | full information | Full-information DRL |
 | Intention-error DRL | full information | injected destination error | Full-information DRL |
 | Combined-error DRL | both injected errors | both injected errors | Full-information DRL |
+
+The case-study-specific paired branches are:
+
+| Case | Correct/reference condition | Comparison condition |
+|---|---|---|
+| 1. CCTV congestion error | Actual DRL with exact CCTV | identical DRL with explicitly corrupted CCTV cell `[2,4]` |
+| 2. Intention/freshness error | partial coverage with Pegasus controller intention | identical partial coverage with `office_04` redirected to `[2,2]` |
+| 3. Policy limitation | Stage 6 time-expanded A* | Full-information frozen DRL |
 
 This design isolates information-condition changes from learning. It does not
 train, fine-tune, or duplicate policies. A better Full-information trajectory
@@ -56,12 +65,24 @@ pedestrian's realized future trajectory.
 
 ### Injected errors
 
-The controlled Office errors are emitted at 0.0 s:
+The controlled Office errors are:
 
 - Congestion error: add 3 people to cell `[3, 3]` on top of its exact count.
-- Intention error: replace `office_02`'s controller destination with cell
+- Intention error: replace `office_04`'s controller destination with cell
   `[2, 2]`.
 - Combined error: apply both changes to the same full-information state.
+- CCTV case-study error: expose count 6 in CCTV cell `[2,4]` from 0–12 s.
+
+Normal and Actual branches continue to receive exact CCTV counts at every tick.
+The CCTV case is explicitly labeled `counterfactual_cctv_corruption`; exact
+simulator counts remain in the privileged log and are never mutated. It is a
+robustness experiment, not a claim that base VACaN CCTV observations are noisy.
+
+Case 2 does not use full congestion. Both branches retain the same limited FOV,
+and only the controller destination differs. The wrong destination resets the
+wrong cell's anchor and freshness. Ground-Truth validity is computed offline as
+`1-min(abs(N_gt(t)-N_gt(anchor_t))/crowd_clip,1)` and is never given to the
+policy.
 
 Congestion and Intention remain independently logged. Freshness is not an
 independent intervention factor. A no-op branch is retained as a validation
@@ -89,7 +110,8 @@ The optional `InterventionManager` remains inside the Stage 3 event pipeline.
 Without a manager, Stage 3 and Stage 5 behavior is unchanged. The preserved
 ordering is:
 
-1. exact CCTV update and current CCTV mean;
+1. exact CCTV update, or explicitly isolated counterfactual corruption before
+   the policy-visible CCTV mean;
 2. non-CCTV linear decay;
 3. noisy virtual-FOV observation;
 4. congestion information condition and direct replacement;
@@ -104,10 +126,9 @@ the same Stage 6 `SharedNavigationCost` implementation.
 
 ## 5. Host decision-replay evidence
 
-The redesigned decision replay passed with the same input robot state and
-incoming recurrent state. Distances below use Actual DRL as the baseline for
-Full-information and no-op, and Full-information DRL as the baseline for the
-three error branches.
+The redesigned eight-experiment decision replay passed with the same robot
+state and incoming recurrent state. Each row uses its configured paired
+baseline.
 
 | Branch | Costmap L2 | Fused feature L2 | Actor hidden L2 | Action L2 | Critic delta |
 |---|---:|---:|---:|---:|---:|
@@ -115,6 +136,9 @@ three error branches.
 | Congestion error | 9.487 | 6.014 | 0.162 | 0.000 | -0.012 |
 | Intention error | 4.014 | 6.731 | 0.165 | 0.000 | +0.054 |
 | Combined error | 10.301 | 8.754 | 0.268 | 0.000 | +0.043 |
+| CCTV congestion error vs Actual | 12.360 | 7.665 | 0.156 | 0.000 | +0.046 |
+| Correct intention partial vs Actual | 6.667 | 6.000 | 0.163 | 0.000 | +0.046 |
+| Intention/freshness error vs correct partial | 3.333 | 6.283 | 0.124 | 0.000 | +0.049 |
 | No-op | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 
 The clipped action did not change at this one decision even though internal
@@ -126,7 +150,7 @@ decision-level result, not evidence that trajectories will remain identical.
 Stage 7 implementation and experiment definition:
 
 - `configs/stage7/office.yaml`
-- `src/vacan/counterfactual/{config,intervention,policy,dataset}.py`
+- `src/vacan/counterfactual/{config,intervention,policy,dataset,case_studies}.py`
 - `src/vacan/mapping/dynamic_costmap.py`
 - `src/vacan/rl/stage5_env.py`
 - `scripts/analyze_stage7_office_decisions.py`
@@ -172,7 +196,7 @@ superseded 2026-11-03 correction experiment:
 
 ## 8. Generated assets and artifacts
 
-The host replay currently writes five experiment records, compressed policy
+The host replay currently writes eight experiment records, compressed policy
 representations, provenance logs, and decision figures to the requested output
 directory. A physical run will additionally write per-branch policy and
 privileged trajectories, intervention JSONL, episode costs, trajectory arrays,
@@ -181,7 +205,7 @@ spatial-temporal query indexes, and figures.
 The previous artifact
 `artifacts/stage7/office/run-seed15101-20261103T160240Z` belongs to the
 superseded correction design. It must not be reported as evidence for this
-five-way experiment.
+case-study experiment.
 
 ## 9. Known limitations and acceptance status
 
@@ -198,6 +222,10 @@ five-way experiment.
 - Hospital and Warehouse Stage 7 comparisons remain pending their own approved
   scope and environment-specific frozen policies.
 
+The code marks a case as a candidate only when the erroneous/comparison branch
+has higher shared cost and its path or outcome diverges. Otherwise it preserves
+the result as negative; path differences are never fabricated.
+
 Stage 7 must not be marked complete until the redesigned physical run passes,
-the no-op equality check passes, all five branches are evaluated with the
+the no-op equality check passes, all configured branches are evaluated with the
 shared cost, and the report is updated with actual closed-loop results.

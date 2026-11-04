@@ -121,7 +121,12 @@ def run() -> dict:
     _load_vacan_gymnasium()
     from sb3_contrib import RecurrentPPO
     from vacan.counterfactual.config import load_stage7_config
-    from vacan.counterfactual.dataset import render_episode_figure
+    from vacan.counterfactual.case_studies import (
+        freshness_validity_metrics, paired_freshness_metrics, paired_trajectory_metrics,
+    )
+    from vacan.counterfactual.dataset import (
+        render_cctv_case_figure, render_episode_figure, render_freshness_case_figure,
+    )
     from vacan.counterfactual.intervention import InterventionManager
     from vacan.mapping.dynamic_costmap import DynamicCostmap, load_stage3_config
     from vacan.reference.config import load_stage6_config
@@ -135,6 +140,14 @@ def run() -> dict:
     started = time.perf_counter()
     cfg7 = load_stage7_config(ARGS.stage7_config.resolve())
     cfg6 = load_stage6_config(Path(cfg7["resolved_stage6_config"]))
+    reference_metadata = json.loads(
+        (Path(cfg7["resolved_stage6_artifact"]) / "metadata.json").read_text(encoding="utf-8")
+    )
+    if int(reference_metadata["seed"]) != ARGS.seed:
+        raise ValueError(
+            f"Stage 7 seed {ARGS.seed} does not match Stage 6 reference seed "
+            f"{reference_metadata['seed']}"
+        )
     stage2_path = Path(cfg6["resolved_stage2_config"])
     stage2 = load_stage2_config(stage2_path)
     stage4 = load_stage4_config(Path(cfg6["resolved_stage4_config"]))
@@ -156,6 +169,9 @@ def run() -> dict:
     evaluator = SharedNavigationCost(cfg6["shared_cost"])
     specs_by_id = {item.intervention_id: item for item in cfg7["parsed_interventions"]}
     branches = [{"id": "original", "intervention_ids": []}] + list(cfg7["experiments"])
+    baseline_by_id = {"original": None, **{
+        item["id"]: item.get("baseline_id", "original") for item in cfg7["experiments"]
+    }}
     branch_records: dict[str, list[dict]] = {}
     branch_ground_truth: dict[str, list[dict]] = {}
     branch_results = []
@@ -263,8 +279,8 @@ def run() -> dict:
     branch_time = 0.0
     for result in branch_results[1:]:
         records = branch_records[result["branch_id"]]
-        baseline_id = "original" if result["branch_id"] in {"full_information", "no_op"} \
-            else "full_information"
+        baseline_id = baseline_by_id[result["branch_id"]]
+        assert baseline_id is not None
         baseline_records = branch_records[baseline_id]
         prefix = [(r["position_xy_m"], r["action"]) for r in records
                   if r["simulation_time_s"] <= branch_time + 1e-9]
@@ -281,6 +297,15 @@ def run() -> dict:
             branch_result["cost"]["total"] - full_cost
         )
         branch_result["delta_j_cf"] = branch_result["delta_j_vs_full_information"]
+        baseline_id = baseline_by_id[branch_result["branch_id"]]
+        if baseline_id is None:
+            branch_result["comparison_baseline"] = None
+            branch_result["delta_j_vs_baseline"] = 0.0
+        else:
+            branch_result["comparison_baseline"] = baseline_id
+            branch_result["delta_j_vs_baseline"] = float(
+                branch_result["cost"]["total"] - by_branch[baseline_id]["cost"]["total"]
+            )
     no_op = by_branch["no_op"]
     no_op_core = [(r["position_xy_m"], r["yaw_rad"], r["action"], r["goal_reached"])
                   for r in branch_records["no_op"]]
@@ -301,7 +326,6 @@ def run() -> dict:
         - factor_attribution["delta_j_congestion_error"]
         - factor_attribution["delta_j_intention_error"]
     )
-    original_result = branch_results[0]
     for branch_result in branch_results[1:]:
         baseline_id = branch_result["pre_branch_baseline"]
         baseline_result = by_branch[baseline_id]
@@ -310,8 +334,7 @@ def run() -> dict:
             branch_records[baseline_id], branch_records[branch_result["branch_id"]],
             {"original_cost": baseline_result["cost"],
              "counterfactual_cost": branch_result["cost"],
-             "delta_j_cf": (branch_result["delta_j_vs_actual"] if baseline_id == "original"
-                            else branch_result["delta_j_cf"])},
+             "delta_j_cf": branch_result["delta_j_vs_baseline"]},
         )
     np.savez_compressed(
         ARGS.output / "branch-trajectories.npz",
@@ -345,6 +368,113 @@ def run() -> dict:
         "delta_j_drl_minus_reference": stage6_comparison["delta_j"],
         "primary_counterfactual_baseline": False,
     }
+    case_cfg = cfg7["case_studies"]
+    trajectory_threshold = float(case_cfg["trajectory_divergence_m"])
+    action_threshold = float(case_cfg["action_divergence_l2"])
+    minimum_cost = float(case_cfg["minimum_cost_increase"])
+
+    def pair(correct_id: str, comparison_id: str) -> dict:
+        metrics = paired_trajectory_metrics(
+            branch_records[correct_id], branch_records[comparison_id],
+            trajectory_threshold_m=trajectory_threshold,
+            action_threshold_l2=action_threshold,
+        )
+        delta = float(by_branch[comparison_id]["cost"]["total"]
+                      - by_branch[correct_id]["cost"]["total"])
+        metrics["correct_branch"] = correct_id
+        metrics["comparison_branch"] = comparison_id
+        metrics["delta_j_comparison_minus_correct"] = delta
+        metrics["navigation_failure_candidate"] = bool(
+            delta > minimum_cost and metrics["path_difference_observed"]
+        )
+        return metrics
+
+    case1_cfg = case_cfg["case_1"]
+    case1 = pair(case1_cfg["correct_branch"], case1_cfg["error_branch"])
+    case1.update({
+        "case_id": "case_1_cctv_congestion_error",
+        "information_error": "counterfactual_cctv_corruption",
+        "base_cctv_assumption": "exact_at_every_tick",
+        "interpretation": "controlled robustness test; not an Actual-DRL sensor claim",
+    })
+    render_cctv_case_figure(
+        ARGS.output / "case-1-cctv-congestion-error.png",
+        branch_records[case1_cfg["correct_branch"]],
+        branch_records[case1_cfg["error_branch"]],
+        case1_cfg["affected_cells"][0],
+    )
+    case2_cfg = case_cfg["case_2"]
+    case2 = pair(case2_cfg["correct_branch"], case2_cfg["error_branch"])
+    affected_cells = case2_cfg["affected_cells"]
+    case2.update({
+        "case_id": "case_2_intention_induced_freshness_error",
+        "information_error": "incorrect_controller_destination",
+        "freshness_difference": paired_freshness_metrics(
+            branch_records[case2_cfg["correct_branch"]],
+            branch_records[case2_cfg["error_branch"]], cells=affected_cells,
+        ),
+        "correct_branch_validity": freshness_validity_metrics(
+            branch_records[case2_cfg["correct_branch"]],
+            branch_ground_truth[case2_cfg["correct_branch"]],
+            crowd_clip=float(case_cfg["crowd_clip"]), cells=affected_cells,
+        ),
+        "error_branch_validity": freshness_validity_metrics(
+            branch_records[case2_cfg["error_branch"]],
+            branch_ground_truth[case2_cfg["error_branch"]],
+            crowd_clip=float(case_cfg["crowd_clip"]), cells=affected_cells,
+        ),
+    })
+    render_freshness_case_figure(
+        ARGS.output / "case-2-intention-freshness-error.png",
+        branch_records[case2_cfg["correct_branch"]],
+        branch_records[case2_cfg["error_branch"]], affected_cells,
+    )
+    reference_path = Path(cfg7["resolved_stage6_artifact"]) / "reference-trajectory.jsonl"
+    if not reference_path.is_file():
+        raise RuntimeError(f"Case 3 requires Stage 6 reference trajectory: {reference_path}")
+    reference_records = [json.loads(line) for line in reference_path.read_text(
+        encoding="utf-8").splitlines()]
+    case3_cfg = case_cfg["case_3"]
+    drl_branch = case3_cfg["drl_branch"]
+    case3 = paired_trajectory_metrics(
+        reference_records, branch_records[drl_branch],
+        trajectory_threshold_m=trajectory_threshold, action_threshold_l2=action_threshold,
+    )
+    reference_cost = stage6_comparison["reference_cost"]
+    delta_policy = float(by_branch[drl_branch]["cost"]["total"] - reference_cost["total"])
+    reference_success = float(reference_cost["terminal_failure"]) == 0.0
+    case3.update({
+        "case_id": "case_3_policy_limitation_vs_time_expanded_astar",
+        "drl_branch": drl_branch,
+        "reference": case3_cfg["reference"],
+        "drl_cost": by_branch[drl_branch]["cost"],
+        "reference_cost": reference_cost,
+        "delta_j_drl_minus_reference": delta_policy,
+        "reference_success": reference_success,
+        "navigation_failure_candidate": bool(
+            reference_success and delta_policy > minimum_cost
+            and case3["path_difference_observed"]
+        ),
+        "global_optimality_claimed": False,
+    })
+    render_episode_figure(
+        ARGS.output / "case-3-full-information-vs-astar.png",
+        reference_records, branch_records[drl_branch],
+        {"original_cost": reference_cost,
+         "counterfactual_cost": by_branch[drl_branch]["cost"],
+         "delta_j_cf": delta_policy},
+    )
+    result["case_studies"] = {
+        "case_1": case1, "case_2": case2, "case_3": case3,
+        "selection_rule": (
+            "candidate only when the comparison cost is higher and the path/outcome diverges"
+        ),
+        "causal_scope": "matched execution-specific counterfactual association",
+    }
+    (ARGS.output / "case-study-results.json").write_text(
+        json.dumps(result["case_studies"], indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     (ARGS.output / "episode-results.json").write_text(
         json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     env.close(); runtime.simulation_app.close()

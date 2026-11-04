@@ -48,14 +48,17 @@ def main() -> None:
         } for item in decision["results"]],
         "no_op_pass": branches["no_op"].get("full_trajectory_equal", False)
         and branches["no_op"]["delta_j_vs_actual"] == 0,
-        "case_study_1_status": ("candidate" if congestion_delta > 0 else "negative_result"),
-        "case_study_1_result": (
-            f"Congestion-error cost minus full-information DRL cost = {congestion_delta:.6f}"
-        ),
-        "case_study_2_status": ("candidate" if intention_delta > 0 else "negative_result"),
-        "case_study_2_result": (
-            f"Intention-error cost minus full-information DRL cost = {intention_delta:.6f}"
-        ),
+        "case_studies": episode["case_studies"],
+        "case_study_status": {
+            identifier: ("candidate" if value["navigation_failure_candidate"]
+                         else "negative_result")
+            for identifier, value in episode["case_studies"].items()
+            if identifier.startswith("case_")
+        },
+        "legacy_five_way_deltas": {
+            "congestion_error_vs_full_information": congestion_delta,
+            "intention_error_vs_full_information": intention_delta,
+        },
         "causal_claim": "controlled execution-specific association only",
     }
     write_json(run / "analysis-summary.json", summary)

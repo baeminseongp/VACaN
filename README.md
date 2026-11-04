@@ -318,10 +318,12 @@ See `docs/stage-6-report.md`.
 
 ## Stage 7 Office frozen-policy comparison
 
-Stage 7 compares Actual DRL, Full-information DRL, Congestion-error DRL,
-Intention-error DRL, and Combined-error DRL with the identical frozen Office
-Recurrent PPO policy. Error branches use Full-information DRL as their primary
-baseline; the Stage 6 planner remains an auxiliary efficiency comparator.
+Stage 7 compares Actual, Full-information, Congestion-error, Intention-error,
+and Combined-error inputs using one frozen Office Recurrent PPO policy. It also
+includes paired branches for three case studies: explicit counterfactual CCTV
+corruption, intention-induced freshness error under partial coverage, and
+Full-information DRL versus the Stage 6 time-expanded A* reference. Exact CCTV
+remains the base assumption; the corruption branch is isolated and labeled.
 
 The repository contains the selected policy, Office occupancy map, and minimum
 matched Stage 6 records required for host decision replay:

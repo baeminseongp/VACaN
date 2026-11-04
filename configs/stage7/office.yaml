@@ -32,12 +32,20 @@ interventions:
     end_time_s: 0.0
     scope: {cells: [[3, 3]]}
     delta: 3
-  - id: intention_injected_error_office_02
+  - id: cctv_counterfactual_corruption_2_4
+    factor: congestion
+    type: cctv_corruption
+    start_time_s: 0.0
+    end_time_s: 12.0
+    scope: {cells: [[2, 4]]}
+    value: 6
+    measurement_convention: counterfactual_cctv_corruption
+  - id: intention_injected_error_office_04
     factor: intention
     type: incorrect_destination
     start_time_s: 0.0
     end_time_s: 0.0
-    pedestrian_id: office_02
+    pedestrian_id: office_04
     destination_grid: [2, 2]
   - id: no_op
     factor: congestion
@@ -48,10 +56,43 @@ interventions:
 experiments:
   - id: full_information
     intervention_ids: [full_congestion, full_intention]
+    baseline_id: original
+    role: full_information_policy_reference
   - id: congestion_error
     intervention_ids: [full_congestion, full_intention, congestion_injected_error_3_3]
+    baseline_id: full_information
   - id: intention_error
-    intervention_ids: [full_congestion, full_intention, intention_injected_error_office_02]
+    intervention_ids: [full_congestion, full_intention, intention_injected_error_office_04]
+    baseline_id: full_information
   - id: combined_error
-    intervention_ids: [full_congestion, full_intention, congestion_injected_error_3_3, intention_injected_error_office_02]
-  - {id: no_op, intervention_ids: [no_op]}
+    intervention_ids: [full_congestion, full_intention, congestion_injected_error_3_3, intention_injected_error_office_04]
+    baseline_id: full_information
+  - id: cctv_congestion_error
+    intervention_ids: [cctv_counterfactual_corruption_2_4]
+    baseline_id: original
+    case_study_id: case_1_cctv_congestion_error
+  - id: correct_intention_partial
+    intervention_ids: [full_intention]
+    baseline_id: original
+    role: case_2_correct_input
+  - id: intention_freshness_error
+    intervention_ids: [full_intention, intention_injected_error_office_04]
+    baseline_id: correct_intention_partial
+    case_study_id: case_2_intention_freshness_error
+  - {id: no_op, intervention_ids: [no_op], baseline_id: original}
+case_studies:
+  trajectory_divergence_m: 0.75
+  action_divergence_l2: 0.05
+  minimum_cost_increase: 1.0e-6
+  crowd_clip: 6.0
+  case_1:
+    correct_branch: original
+    error_branch: cctv_congestion_error
+    affected_cells: [[2, 4]]
+  case_2:
+    correct_branch: correct_intention_partial
+    error_branch: intention_freshness_error
+    affected_cells: [[4, 3], [2, 2]]
+  case_3:
+    drl_branch: full_information
+    reference: stage6_time_expanded_astar
