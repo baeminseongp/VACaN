@@ -5,3 +5,7 @@
 checkpoints/**/*.zip filter=lfs diff=lfs merge=lfs -text
 reproduction/**/*.jsonl filter=lfs diff=lfs merge=lfs -text
 reproduction/**/*.npz filter=lfs diff=lfs merge=lfs -text
+artifacts/stage7/**/*.jsonl filter=lfs diff=lfs merge=lfs -text
+artifacts/stage7/**/*.npz filter=lfs diff=lfs merge=lfs -text
+artifacts/stage7/**/*.png filter=lfs diff=lfs merge=lfs -text
+artifacts/stage7/**/*.log filter=lfs diff=lfs merge=lfs -text

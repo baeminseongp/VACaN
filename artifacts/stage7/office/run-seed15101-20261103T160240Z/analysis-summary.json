@@ -1,0 +1,641 @@
+{
+  "branches": [
+    {
+      "branch_id": "original",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.540204979596864,
+        "smoothness": 14.78872619867325,
+        "social_violation_integral_s": 0.2830775212125833,
+        "terminal_failure": 0.0,
+        "total": 25.356724457853552,
+        "travel_time_s": 9.966666666666667,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.080409959193728,
+        "weighted_smoothness": 1.4788726198673252,
+        "weighted_social": 2.830775212125833,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 9.966666666666667
+      },
+      "delta_j_cf": 0.0,
+      "intervention_event_count": 0,
+      "intervention_ids": [],
+      "reset_max_error": 0.0,
+      "steps": 50,
+      "success": true
+    },
+    {
+      "branch_id": "congestion_error",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.540204979596864,
+        "smoothness": 14.78872619867325,
+        "social_violation_integral_s": 0.2830775212125833,
+        "terminal_failure": 0.0,
+        "total": 25.356724457853552,
+        "travel_time_s": 9.966666666666667,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.080409959193728,
+        "weighted_smoothness": 1.4788726198673252,
+        "weighted_social": 2.830775212125833,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 9.966666666666667
+      },
+      "delta_j_cf": 0.0,
+      "intervention_event_count": 1,
+      "intervention_ids": [
+        "congestion_overestimate_3_3"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 50,
+      "success": true
+    },
+    {
+      "branch_id": "congestion_correction",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.697622821740396,
+        "smoothness": 15.061828708648687,
+        "social_violation_integral_s": 0.302466881752732,
+        "terminal_failure": 0.0,
+        "total": 26.17609733187298,
+        "travel_time_s": 10.25,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.395245643480791,
+        "weighted_smoothness": 1.5061828708648688,
+        "weighted_social": 3.02466881752732,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 10.25
+      },
+      "delta_j_cf": 0.8193728740194288,
+      "intervention_event_count": 1,
+      "intervention_ids": [
+        "congestion_gt_correction_3_3"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 52,
+      "success": true
+    },
+    {
+      "branch_id": "intention_error",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.729007807527583,
+        "smoothness": 15.061097788810734,
+        "social_violation_integral_s": 0.2985132700819453,
+        "terminal_failure": 0.0,
+        "total": 26.24925809475569,
+        "travel_time_s": 10.3,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.458015615055166,
+        "weighted_smoothness": 1.5061097788810736,
+        "weighted_social": 2.985132700819453,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 10.3
+      },
+      "delta_j_cf": 0.8925336369021366,
+      "intervention_event_count": 1,
+      "intervention_ids": [
+        "intention_wrong_office_02"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 52,
+      "success": true
+    },
+    {
+      "branch_id": "intention_correction",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.818322389047971,
+        "smoothness": 14.964631116390231,
+        "social_violation_integral_s": 0.29573594645471724,
+        "terminal_failure": 0.0,
+        "total": 26.573800687615474,
+        "travel_time_s": 10.483333333333333,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.636644778095942,
+        "weighted_smoothness": 1.4964631116390232,
+        "weighted_social": 2.9573594645471726,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 10.483333333333333
+      },
+      "delta_j_cf": 1.217076229761922,
+      "intervention_event_count": 1,
+      "intervention_ids": [
+        "intention_realized_correction_office_02"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 53,
+      "success": true
+    },
+    {
+      "branch_id": "combined",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.355407722810418,
+        "smoothness": 14.474569261074068,
+        "social_violation_integral_s": 0.31297656221806197,
+        "terminal_failure": 0.0,
+        "total": 24.938037993908864,
+        "travel_time_s": 9.65,
+        "weighted_collision": 0.0,
+        "weighted_length": 10.710815445620836,
+        "weighted_smoothness": 1.4474569261074068,
+        "weighted_social": 3.12976562218062,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 9.65
+      },
+      "delta_j_cf": -0.4186864639446881,
+      "intervention_event_count": 2,
+      "intervention_ids": [
+        "congestion_gt_correction_3_3",
+        "intention_realized_correction_office_02"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 49,
+      "success": true
+    },
+    {
+      "branch_id": "no_op",
+      "cost": {
+        "collision_events": 0,
+        "path_length_m": 5.540204979596864,
+        "smoothness": 14.78872619867325,
+        "social_violation_integral_s": 0.2830775212125833,
+        "terminal_failure": 0.0,
+        "total": 25.356724457853552,
+        "travel_time_s": 9.966666666666667,
+        "weighted_collision": 0.0,
+        "weighted_length": 11.080409959193728,
+        "weighted_smoothness": 1.4788726198673252,
+        "weighted_social": 2.830775212125833,
+        "weighted_terminal_failure": 0.0,
+        "weighted_time": 9.966666666666667
+      },
+      "delta_j_cf": 0.0,
+      "full_trajectory_equal": true,
+      "intervention_event_count": 0,
+      "intervention_ids": [
+        "no_op"
+      ],
+      "pre_branch_trajectory_equal": true,
+      "reset_max_error": 0.0,
+      "steps": 50,
+      "success": true
+    }
+  ],
+  "case_study_1_reason": "No evaluated Office Stage 6 episode has J_DRL > J_reference",
+  "case_study_1_status": "unavailable",
+  "case_study_2_result": "Realized-destination correction changed the decision and increased cost in this seed; it did not improve navigation",
+  "case_study_2_status": "retrospective_candidate",
+  "causal_claim": "controlled execution-specific association only",
+  "decision_results": [
+    {
+      "action_l2": 0.0,
+      "actor_hidden_l2": 0.0,
+      "critic_value_difference": 0.0,
+      "experiment_id": "congestion_error",
+      "feature_l2": {
+        "features_extractor.output": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            160
+          ]
+        },
+        "features_extractor.robot.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.robot.2": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.spatial.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            16,
+            29,
+            29
+          ]
+        },
+        "features_extractor.spatial.2": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32,
+            14,
+            14
+          ]
+        },
+        "features_extractor.spatial.4": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32,
+            6,
+            6
+          ]
+        },
+        "features_extractor.spatial_projection.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            128
+          ]
+        }
+      },
+      "input_costmap_l2": 0.0
+    },
+    {
+      "action_l2": 0.10971928387880325,
+      "actor_hidden_l2": 0.1811333642078264,
+      "critic_value_difference": 0.05235862731933594,
+      "experiment_id": "congestion_correction",
+      "feature_l2": {
+        "features_extractor.output": {
+          "l2": 3.4618157579280173,
+          "normalized_l2": 0.03502983132561067,
+          "shape": [
+            1,
+            160
+          ]
+        },
+        "features_extractor.robot.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.robot.2": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.spatial.0": {
+          "l2": 6.844448520168927,
+          "normalized_l2": 0.05323108169162499,
+          "shape": [
+            1,
+            16,
+            29,
+            29
+          ]
+        },
+        "features_extractor.spatial.2": {
+          "l2": 11.31227766895378,
+          "normalized_l2": 0.045138248668587094,
+          "shape": [
+            1,
+            32,
+            14,
+            14
+          ]
+        },
+        "features_extractor.spatial.4": {
+          "l2": 10.660719980871468,
+          "normalized_l2": 0.03904404991001498,
+          "shape": [
+            1,
+            32,
+            6,
+            6
+          ]
+        },
+        "features_extractor.spatial_projection.0": {
+          "l2": 5.898164420548105,
+          "normalized_l2": 0.03821825093624918,
+          "shape": [
+            1,
+            128
+          ]
+        }
+      },
+      "input_costmap_l2": 3.2871809005737305
+    },
+    {
+      "action_l2": 0.13380767405033112,
+      "actor_hidden_l2": 0.2699388005711894,
+      "critic_value_difference": 0.0031185150146484375,
+      "experiment_id": "intention_error",
+      "feature_l2": {
+        "features_extractor.output": {
+          "l2": 7.801922699859233,
+          "normalized_l2": 0.07894701951299071,
+          "shape": [
+            1,
+            160
+          ]
+        },
+        "features_extractor.robot.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.robot.2": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.spatial.0": {
+          "l2": 9.813516963186135,
+          "normalized_l2": 0.07632231020661046,
+          "shape": [
+            1,
+            16,
+            29,
+            29
+          ]
+        },
+        "features_extractor.spatial.2": {
+          "l2": 16.450917779221644,
+          "normalized_l2": 0.06564244967067394,
+          "shape": [
+            1,
+            32,
+            14,
+            14
+          ]
+        },
+        "features_extractor.spatial.4": {
+          "l2": 17.54111342050897,
+          "normalized_l2": 0.06424295067279312,
+          "shape": [
+            1,
+            32,
+            6,
+            6
+          ]
+        },
+        "features_extractor.spatial_projection.0": {
+          "l2": 12.583995912268097,
+          "normalized_l2": 0.08154033683433723,
+          "shape": [
+            1,
+            128
+          ]
+        }
+      },
+      "input_costmap_l2": 4.681524753570557
+    },
+    {
+      "action_l2": 0.07580619305372238,
+      "actor_hidden_l2": 0.13558355741702385,
+      "critic_value_difference": 0.045322418212890625,
+      "experiment_id": "intention_correction",
+      "feature_l2": {
+        "features_extractor.output": {
+          "l2": 3.808300748624651,
+          "normalized_l2": 0.03853588468883857,
+          "shape": [
+            1,
+            160
+          ]
+        },
+        "features_extractor.robot.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.robot.2": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.spatial.0": {
+          "l2": 9.513278781020372,
+          "normalized_l2": 0.07398727866174375,
+          "shape": [
+            1,
+            16,
+            29,
+            29
+          ]
+        },
+        "features_extractor.spatial.2": {
+          "l2": 15.531604111495927,
+          "normalized_l2": 0.06197420441073664,
+          "shape": [
+            1,
+            32,
+            14,
+            14
+          ]
+        },
+        "features_extractor.spatial.4": {
+          "l2": 15.303094453398684,
+          "normalized_l2": 0.05604638192244582,
+          "shape": [
+            1,
+            32,
+            6,
+            6
+          ]
+        },
+        "features_extractor.spatial_projection.0": {
+          "l2": 6.77885956029198,
+          "normalized_l2": 0.04392487853242232,
+          "shape": [
+            1,
+            128
+          ]
+        }
+      },
+      "input_costmap_l2": 4.6097731590271
+    },
+    {
+      "action_l2": 0.17267048358917236,
+      "actor_hidden_l2": 0.2860230411502267,
+      "critic_value_difference": 0.07808876037597656,
+      "experiment_id": "combined",
+      "feature_l2": {
+        "features_extractor.output": {
+          "l2": 6.347317628461882,
+          "normalized_l2": 0.0642279894260387,
+          "shape": [
+            1,
+            160
+          ]
+        },
+        "features_extractor.robot.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.robot.2": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.spatial.0": {
+          "l2": 15.17768750321579,
+          "normalized_l2": 0.11804087955265899,
+          "shape": [
+            1,
+            16,
+            29,
+            29
+          ]
+        },
+        "features_extractor.spatial.2": {
+          "l2": 24.776730797762042,
+          "normalized_l2": 0.09886410753630812,
+          "shape": [
+            1,
+            32,
+            14,
+            14
+          ]
+        },
+        "features_extractor.spatial.4": {
+          "l2": 24.525272703763417,
+          "normalized_l2": 0.08982188569070641,
+          "shape": [
+            1,
+            32,
+            6,
+            6
+          ]
+        },
+        "features_extractor.spatial_projection.0": {
+          "l2": 11.464039340976797,
+          "normalized_l2": 0.07428337039064244,
+          "shape": [
+            1,
+            128
+          ]
+        }
+      },
+      "input_costmap_l2": 7.325753688812256
+    },
+    {
+      "action_l2": 0.0,
+      "actor_hidden_l2": 0.0,
+      "critic_value_difference": 0.0,
+      "experiment_id": "no_op",
+      "feature_l2": {
+        "features_extractor.output": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            160
+          ]
+        },
+        "features_extractor.robot.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.robot.2": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32
+          ]
+        },
+        "features_extractor.spatial.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            16,
+            29,
+            29
+          ]
+        },
+        "features_extractor.spatial.2": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32,
+            14,
+            14
+          ]
+        },
+        "features_extractor.spatial.4": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            32,
+            6,
+            6
+          ]
+        },
+        "features_extractor.spatial_projection.0": {
+          "l2": 0.0,
+          "normalized_l2": 0.0,
+          "shape": [
+            1,
+            128
+          ]
+        }
+      },
+      "input_costmap_l2": 0.0
+    }
+  ],
+  "documented_nondeterminism": "none observed within the verified no-op tolerance",
+  "factor_attribution": {
+    "delta_j_combined": -0.4186864639446881,
+    "delta_j_congestion_correction": 0.8193728740194288,
+    "delta_j_intention_correction": 1.217076229761922,
+    "non_additive_interaction": -2.455135567726039
+  },
+  "matched_randomness": "same seed and deterministic reset for every branch",
+  "no_op_pass": true,
+  "pedestrians_react_to_robot": false,
+  "policy_checkpoint": "/home/engineer/VACaN/artifacts/stage5/train-office-partial_coverage_noise-seed5101-20261102T071023Z/policy-latest.zip",
+  "policy_frozen": true,
+  "replay_semantics": "closed_loop_physical_matched_reset",
+  "scenario": "office",
+  "schema_version": 1,
+  "seed": 15101
+}

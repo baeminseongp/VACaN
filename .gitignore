@@ -22,12 +22,15 @@ artifacts/*
 !artifacts/.gitkeep
 !artifacts/stage1-isaac/
 !artifacts/stage1-isaac/**/resolved_routes.json
+!artifacts/stage7/
+!artifacts/stage7/**
 
 # Curated policy and minimum replay inputs are versioned under checkpoints/
-# and reproduction/ with Git LFS. Raw training/simulation runs remain ignored.
+# and reproduction/. The complete Stage 7 Office run archive is also retained.
 
 # Generated experiment outputs and secrets
 experiments/outputs/*
 .env
 *.log
+!artifacts/stage7/**/*.log
 .DS_Store
