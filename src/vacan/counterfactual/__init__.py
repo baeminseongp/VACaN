@@ -1,7 +1,7 @@
 """Congestion, intention/freshness, and policy-limit case-study analysis."""
 
 from .case_studies import (
-    freshness_validity_metrics,
+    coverage_gap_metrics, freshness_validity_metrics,
     paired_freshness_metrics,
     paired_trajectory_metrics,
 )
@@ -20,7 +20,7 @@ from .policy import (
 )
 
 __all__ = [
-    "freshness_validity_metrics", "paired_freshness_metrics",
+    "coverage_gap_metrics", "freshness_validity_metrics", "paired_freshness_metrics",
     "paired_trajectory_metrics",
     "InterventionManager", "InterventionSpec", "decision_costmap_intervention",
     "load_stage7_config", "parse_intervention", "resolve_scope",

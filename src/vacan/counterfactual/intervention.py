@@ -83,7 +83,7 @@ def parse_intervention(raw: dict[str, Any], geometry: GridGeometry) -> Intervent
         raise ValueError("Stage 7 factor must be congestion or intention")
     supported = {
         "congestion": {"overestimate", "underestimate", "ground_truth_correction",
-                       "full_information", "cctv_corruption", "no_op"},
+                       "full_information", "coverage_restoration", "cctv_corruption", "no_op"},
         "intention": {"incorrect_destination", "missing", "spurious",
                       "ground_truth_correction", "full_information", "no_op"},
     }
@@ -118,7 +118,8 @@ class InterventionManager:
             raise ValueError("intervention identifiers must be unique")
         for spec in specs:
             cctv_targets = set(spec.cells) & cctv_cells
-            if cctv_targets and spec.intervention_type not in {"no_op", "cctv_corruption"}:
+            if cctv_targets and spec.intervention_type not in {
+                    "no_op", "cctv_corruption", "coverage_restoration"}:
                 raise ValueError(f"{spec.intervention_id}: interventions cannot overwrite CCTV cells")
             if spec.intervention_type == "cctv_corruption":
                 if not spec.cells or set(spec.cells) - cctv_cells:
@@ -128,6 +129,15 @@ class InterventionManager:
                 if spec.measurement_convention != "counterfactual_cctv_corruption":
                     raise ValueError(
                         f"{spec.intervention_id}: CCTV corruption must be explicitly labeled"
+                    )
+            if spec.intervention_type == "coverage_restoration":
+                if not spec.cells or set(spec.cells) & cctv_cells:
+                    raise ValueError(
+                        f"{spec.intervention_id}: coverage_restoration targets non-CCTV cells"
+                    )
+                if spec.measurement_convention != "counterfactual_additional_coverage":
+                    raise ValueError(
+                        f"{spec.intervention_id}: restored coverage must be explicitly labeled"
                     )
             if spec.factor == "congestion" and not spec.cells and spec.intervention_type not in {
                     "no_op", "full_information"}:
@@ -228,10 +238,13 @@ class InterventionManager:
                 continue
             for cell in spec.cells:
                 row, column = cell
-                if not visibility_mask[row][column] and cell not in overrides:
+                if (spec.intervention_type != "coverage_restoration"
+                        and not visibility_mask[row][column] and cell not in overrides):
                     continue
                 original = float(overrides.get(cell, counts.get(cell, 0)))
-                if spec.intervention_type == "ground_truth_correction":
+                if spec.intervention_type == "coverage_restoration":
+                    modified = float(ground_truth_counts[row][column])
+                elif spec.intervention_type == "ground_truth_correction":
                     if spec.measurement_convention != "full_grid_count":
                         raise ValueError("only explicitly labeled full_grid_count correction is supported")
                     modified = float(ground_truth_counts[row][column])
@@ -246,7 +259,11 @@ class InterventionManager:
                 event = {
                     "intervention_id": spec.intervention_id, "factor": "congestion",
                     "type": spec.intervention_type, "simulation_time_s": float(now),
-                    "grid_cell": list(cell), "observation_source": "robot_fov",
+                    "grid_cell": list(cell),
+                    "observation_source": (
+                        "counterfactual_additional_coverage"
+                        if spec.intervention_type == "coverage_restoration" else "robot_fov"
+                    ),
                     "original_observed_count": original, "modified_count": modified,
                     "ground_truth_count": int(ground_truth_counts[row][column]),
                     "measurement_convention": spec.measurement_convention or "noisy_fov_assignment",
@@ -388,9 +405,11 @@ def decision_costmap_intervention(costmap: list[list[float]], diagnostics: dict[
             counts[cell] = counts.get(cell, 0) + 1
         for row, column in spec.cells:
             original = float(counts.get((row, column), 0))
-            if spec.intervention_type == "ground_truth_correction":
+            if spec.intervention_type in {"ground_truth_correction", "coverage_restoration"}:
                 if spec.measurement_convention != "full_grid_count":
-                    raise ValueError("decision correction must be labeled full_grid_count")
+                    if spec.intervention_type != "coverage_restoration" or \
+                            spec.measurement_convention != "counterfactual_additional_coverage":
+                        raise ValueError("decision correction has an invalid measurement label")
                 modified = float(ground_truth[row][column])
             elif spec.value is not None:
                 modified = spec.value

@@ -2,8 +2,9 @@
 
 Stage 7 has been redesigned around a single frozen Office Recurrent PPO policy.
 The implementation retains the five information conditions and adds the paired
-branches required for three case studies: counterfactual CCTV congestion
-corruption, intention-induced freshness error under partial coverage, and a
+branches required for the case studies: missing crowd information in a
+non-CCTV region, counterfactual CCTV congestion corruption,
+intention-induced freshness error under partial coverage, and a
 full-information DRL comparison with the Stage 6 reference planner.
 
 Stage 7 is **in progress**. Host-side decision replay and unit tests pass for
@@ -29,7 +30,8 @@ The case-study-specific paired branches are:
 
 | Case | Correct/reference condition | Comparison condition |
 |---|---|---|
-| 1. CCTV congestion error | Actual DRL with exact CCTV | identical DRL with explicitly corrupted CCTV cell `[2,4]` |
+| 1-1. Missing CCTV coverage | exact counterfactual coverage in non-CCTV cell `[3,3]` | Actual partial coverage |
+| 1-2. CCTV sensing error | Actual DRL with exact CCTV | identical DRL with explicitly corrupted CCTV cell `[2,4]` |
 | 2. Intention/freshness error | partial coverage with Pegasus controller intention | identical partial coverage with `office_04` redirected to `[2,2]` |
 | 3. Policy limitation | Stage 6 time-expanded A* | Full-information frozen DRL |
 
@@ -72,11 +74,19 @@ The controlled Office errors are:
   `[2, 2]`.
 - Combined error: apply both changes to the same full-information state.
 - CCTV case-study error: expose count 6 in CCTV cell `[2,4]` from 0–12 s.
+- Missing-coverage control: expose the exact count in otherwise non-CCTV cell
+  `[3,3]`; the comparison branch retains the original sensing gap.
 
 Normal and Actual branches continue to receive exact CCTV counts at every tick.
 The CCTV case is explicitly labeled `counterfactual_cctv_corruption`; exact
 simulator counts remain in the privileged log and are never mutated. It is a
 robustness experiment, not a claim that base VACaN CCTV observations are noisy.
+
+Case 1-1 retains the original CCTV layout. `coverage_restored` is a privileged
+counterfactual control for the single non-CCTV cell, not a change to Actual
+DRL. The exported metrics record the policy-visible estimate, exact crowd
+count, visibility, last update source, whether the robot is inside the target
+cell, and maximum crowd underestimation.
 
 Case 2 does not use full congestion. Both branches retain the same limited FOV,
 and only the controller destination differs. The wrong destination resets the
@@ -126,7 +136,7 @@ the same Stage 6 `SharedNavigationCost` implementation.
 
 ## 5. Host decision-replay evidence
 
-The redesigned eight-experiment decision replay passed with the same robot
+The redesigned nine-experiment decision replay passed with the same robot
 state and incoming recurrent state. Each row uses its configured paired
 baseline.
 
@@ -136,6 +146,7 @@ baseline.
 | Congestion error | 9.487 | 6.014 | 0.162 | 0.000 | -0.012 |
 | Intention error | 4.014 | 6.731 | 0.165 | 0.000 | +0.054 |
 | Combined error | 10.301 | 8.754 | 0.268 | 0.000 | +0.043 |
+| Coverage restored `[3,3]` vs Actual gap | 3.162 | 1.768 | 0.051 | 0.000 | -0.005 |
 | CCTV congestion error vs Actual | 12.360 | 7.665 | 0.156 | 0.000 | +0.046 |
 | Correct intention partial vs Actual | 6.667 | 6.000 | 0.163 | 0.000 | +0.046 |
 | Intention/freshness error vs correct partial | 3.333 | 6.283 | 0.124 | 0.000 | +0.049 |

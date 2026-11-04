@@ -112,6 +112,45 @@ def render_cctv_case_figure(path: Path, correct: list[dict[str, Any]],
     figure.savefig(path, dpi=160); plt.close(figure)
 
 
+def render_coverage_gap_case_figure(
+    path: Path, restored: list[dict[str, Any]], missing: list[dict[str, Any]],
+    missing_ground_truth: list[dict[str, Any]], cell: list[int],
+) -> None:
+    """Render a path pair and missing-coverage estimate versus exact crowd."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    figure, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+    for records, label, color in ((restored, "coverage restored", "#1f77b4"),
+                                  (missing, "missing CCTV coverage", "#d62728")):
+        xy = np.asarray([record["position_xy_m"] for record in records], dtype=float)
+        axes[0].plot(xy[:, 0], xy[:, 1], label=label, color=color)
+        timed = [(record["simulation_time_s"], record["costmap_diagnostics"])
+                 for record in records if record.get("costmap_diagnostics")]
+        axes[1].plot(
+            [item[0] for item in timed],
+            [float(item[1]["cost_after"][cell[0]][cell[1]]) for item in timed],
+            label=f"{label} input", color=color,
+        )
+    truth = {round(float(item["simulation_time_s"]), 6): item
+             for item in missing_ground_truth}
+    timed_missing = [record for record in missing if record.get("costmap_diagnostics")]
+    axes[1].step(
+        [record["simulation_time_s"] for record in timed_missing],
+        [float(truth[round(float(record["simulation_time_s"]), 6)]
+               ["ground_truth_density"][cell[0]][cell[1]])
+         for record in timed_missing],
+        label="privileged exact crowd", color="#2ca02c", linestyle="--", where="post",
+    )
+    axes[0].set_aspect("equal"); axes[0].set_title("Paired closed-loop paths")
+    axes[0].legend(); axes[1].legend(fontsize=8); axes[1].set_xlabel("Simulation time (s)")
+    axes[1].set_ylabel("Crowd cost / count")
+    axes[1].set_title(f"Non-CCTV cell [{cell[0]},{cell[1]}]")
+    figure.tight_layout(); path.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=160); plt.close(figure)
+
+
 def render_freshness_case_figure(path: Path, correct: list[dict[str, Any]],
                                  erroneous: list[dict[str, Any]], cells: list[list[int]]) -> None:
     """Render paired paths and cell freshness after an intention error."""

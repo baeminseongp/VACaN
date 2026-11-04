@@ -10,7 +10,8 @@ from sb3_contrib import RecurrentPPO
 
 from vacan.counterfactual.config import load_stage7_config
 from vacan.counterfactual.case_studies import (
-    freshness_validity_metrics, paired_freshness_metrics, paired_trajectory_metrics,
+    coverage_gap_metrics, freshness_validity_metrics,
+    paired_freshness_metrics, paired_trajectory_metrics,
 )
 from vacan.counterfactual.intervention import (
     InterventionManager, InterventionSpec, decision_costmap_intervention, resolve_scope,
@@ -64,7 +65,7 @@ def test_stage7_office_config_has_exactly_two_factors_and_frozen_policy():
     assert value["scenario"] == "office"
     assert value["policy"]["frozen"] is True
     assert {item.factor for item in value["parsed_interventions"]} == {"congestion", "intention"}
-    assert {"case_1", "case_2", "case_3"} <= set(value["case_studies"])
+    assert {"case_1_1", "case_1_2", "case_2", "case_3"} <= set(value["case_studies"])
 
 
 def test_scope_supports_cells_rectangle_and_polygon():
@@ -176,6 +177,31 @@ def test_cctv_corruption_requires_cctv_only_scope_and_explicit_label():
                 measurement_convention="counterfactual_cctv_corruption",
             )
         ], geometry, {(0, 0)})
+
+
+def test_coverage_restoration_updates_invisible_non_cctv_cell_from_exact_count():
+    geometry = GridGeometry((0, 0), (4, 4), 1)
+    item = InterventionSpec(
+        "coverage", "congestion", "coverage_restoration", 0, 1,
+        cells=((3, 3),),
+        measurement_convention="counterfactual_additional_coverage",
+    )
+    manager = InterventionManager([item], geometry, {(0, 0)})
+    truth = [[0] * 4 for _ in range(4)]
+    truth[3][3] = 4
+    overrides, logs = manager.modify_congestion(
+        0.0, [], [[False] * 4 for _ in range(4)], truth
+    )
+    assert overrides[(3, 3)] == 4
+    assert logs[0]["observation_source"] == "counterfactual_additional_coverage"
+    with pytest.raises(ValueError, match="non-CCTV"):
+        InterventionManager([
+            InterventionSpec(
+                "bad", "congestion", "coverage_restoration", 0, 1,
+                cells=((0, 0),),
+                measurement_convention="counterfactual_additional_coverage",
+            )
+        ], geometry, {(0, 0)})
     with pytest.raises(ValueError, match="explicitly labeled"):
         InterventionManager([
             InterventionSpec(
@@ -272,6 +298,24 @@ def test_case_study_trajectory_and_freshness_metrics_are_timestamp_aligned():
     )
     assert paired["maximum_l2"] == 0.5
     assert paired["first_difference_time_s"] == 1.0
+
+    coverage_trajectory = [{
+        "simulation_time_s": 1.0, "position_xy_m": [0.5, 0.5], "action": [0, 0],
+        "costmap_diagnostics": {
+            "cost_after": [[0.0, 0.0], [0.0, 0.0]],
+            "robot_visibility_mask": [[False, False], [False, False]],
+            "last_update_type": [["cctv", "decay"], ["decay", "decay"]],
+        },
+    }]
+    coverage_truth = [{
+        "simulation_time_s": 1.0, "ground_truth_density": [[2, 0], [0, 0]],
+    }]
+    gap = coverage_gap_metrics(
+        coverage_trajectory, coverage_truth, cells=[[0, 0]],
+        geometry=GridGeometry((0, 0), (2, 2), 1),
+    )
+    assert gap["maximum_underestimation"] == 2
+    assert gap["robot_target_cell_sample_count"] == 1
 
 
 class TinyEnv(gym.Env):

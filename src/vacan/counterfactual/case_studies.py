@@ -11,6 +11,8 @@ from typing import Any
 
 import numpy as np
 
+from vacan.mapping.dynamic_costmap import GridGeometry
+
 
 def _path_length(records: list[dict[str, Any]]) -> float:
     if len(records) < 2:
@@ -210,6 +212,61 @@ def paired_freshness_metrics(
         "maximum_l2": max((item["l2"] for item in samples), default=0.0),
         "first_difference_time_s": next(
             (item["simulation_time_s"] for item in samples if item["l2"] > 1e-9), None
+        ),
+        "samples": samples,
+    }
+
+
+def coverage_gap_metrics(
+    trajectory: list[dict[str, Any]],
+    ground_truth: list[dict[str, Any]],
+    *,
+    cells: list[list[int]],
+    geometry: GridGeometry,
+) -> dict[str, Any]:
+    """Measure underestimated crowd in non-CCTV cells along a robot path."""
+    truth_by_time = {
+        round(float(item["simulation_time_s"]), 6): item for item in ground_truth
+    }
+    selected = {tuple(map(int, cell)) for cell in cells}
+    samples = []
+    for item in trajectory:
+        diagnostics = item.get("costmap_diagnostics") or {}
+        estimated = diagnostics.get("cost_after")
+        truth = truth_by_time.get(round(float(item["simulation_time_s"]), 6))
+        if estimated is None or truth is None:
+            continue
+        robot_cell = geometry.world_to_grid(*map(float, item["position_xy_m"]))
+        for row, column in sorted(selected):
+            estimate = float(estimated[row][column])
+            actual = float(truth["ground_truth_density"][row][column])
+            samples.append({
+                "simulation_time_s": float(item["simulation_time_s"]),
+                "grid_cell": [row, column],
+                "estimated_cost": estimate,
+                "ground_truth_count": actual,
+                "underestimation": max(actual - estimate, 0.0),
+                "signed_error": estimate - actual,
+                "robot_in_target_cell": robot_cell == (row, column),
+                "robot_visibility": bool(
+                    diagnostics["robot_visibility_mask"][row][column]
+                ),
+                "last_update_type": diagnostics["last_update_type"][row][column],
+            })
+    encounter = [item for item in samples if item["robot_in_target_cell"]]
+    return {
+        "affected_cells": [list(cell) for cell in sorted(selected)],
+        "sample_count": len(samples),
+        "maximum_underestimation": max(
+            (item["underestimation"] for item in samples), default=0.0
+        ),
+        "first_underestimation_time_s": next(
+            (item["simulation_time_s"] for item in samples
+             if item["underestimation"] > 1e-9), None
+        ),
+        "robot_target_cell_sample_count": len(encounter),
+        "maximum_underestimation_while_robot_in_target_cell": max(
+            (item["underestimation"] for item in encounter), default=0.0
         ),
         "samples": samples,
     }

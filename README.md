@@ -320,10 +320,11 @@ See `docs/stage-6-report.md`.
 
 Stage 7 compares Actual, Full-information, Congestion-error, Intention-error,
 and Combined-error inputs using one frozen Office Recurrent PPO policy. It also
-includes paired branches for three case studies: explicit counterfactual CCTV
-corruption, intention-induced freshness error under partial coverage, and
-Full-information DRL versus the Stage 6 time-expanded A* reference. Exact CCTV
-remains the base assumption; the corruption branch is isolated and labeled.
+includes paired branches for a missing-CCTV-coverage crowd encounter, explicit
+counterfactual CCTV corruption, intention-induced freshness error under partial
+coverage, and Full-information DRL versus the Stage 6 time-expanded A*
+reference. Exact CCTV remains the base assumption; restored coverage and
+corrupted sensing are isolated counterfactual controls.
 
 The repository contains the selected policy, Office occupancy map, and minimum
 matched Stage 6 records required for host decision replay:

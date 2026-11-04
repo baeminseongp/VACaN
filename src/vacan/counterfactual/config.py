@@ -49,11 +49,14 @@ def load_stage7_config(path: Path) -> dict[str, Any]:
         if baseline not in available_branches or baseline == experiment["id"]:
             raise ValueError(f"{experiment['id']}: invalid baseline_id {baseline}")
     cases = data.get("case_studies", {})
-    required_cases = {"case_1", "case_2", "case_3"}
+    required_cases = {"case_1_1", "case_1_2", "case_2", "case_3"}
     if set(cases) & required_cases != required_cases:
-        raise ValueError("Stage 7 requires case_studies.case_1, case_2, and case_3")
+        raise ValueError(
+            "Stage 7 requires case_1_1, case_1_2, case_2, and case_3"
+        )
     referenced = {
-        cases["case_1"].get("correct_branch"), cases["case_1"].get("error_branch"),
+        cases["case_1_1"].get("correct_branch"), cases["case_1_1"].get("error_branch"),
+        cases["case_1_2"].get("correct_branch"), cases["case_1_2"].get("error_branch"),
         cases["case_2"].get("correct_branch"), cases["case_2"].get("error_branch"),
         cases["case_3"].get("drl_branch"),
     }

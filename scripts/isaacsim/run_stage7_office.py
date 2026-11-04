@@ -122,10 +122,12 @@ def run() -> dict:
     from sb3_contrib import RecurrentPPO
     from vacan.counterfactual.config import load_stage7_config
     from vacan.counterfactual.case_studies import (
-        freshness_validity_metrics, paired_freshness_metrics, paired_trajectory_metrics,
+        coverage_gap_metrics, freshness_validity_metrics,
+        paired_freshness_metrics, paired_trajectory_metrics,
     )
     from vacan.counterfactual.dataset import (
-        render_cctv_case_figure, render_episode_figure, render_freshness_case_figure,
+        render_cctv_case_figure, render_coverage_gap_case_figure,
+        render_episode_figure, render_freshness_case_figure,
     )
     from vacan.counterfactual.intervention import InterventionManager
     from vacan.mapping.dynamic_costmap import DynamicCostmap, load_stage3_config
@@ -389,19 +391,41 @@ def run() -> dict:
         )
         return metrics
 
-    case1_cfg = case_cfg["case_1"]
-    case1 = pair(case1_cfg["correct_branch"], case1_cfg["error_branch"])
-    case1.update({
-        "case_id": "case_1_cctv_congestion_error",
+    case1_1_cfg = case_cfg["case_1_1"]
+    case1_1 = pair(case1_1_cfg["correct_branch"], case1_1_cfg["error_branch"])
+    case1_1.update({
+        "case_id": "case_1_1_missing_cctv_coverage",
+        "information_error": "unobserved_non_cctv_crowd",
+        "base_cctv_assumption": "exact_where_installed",
+        "missing_coverage_metrics": coverage_gap_metrics(
+            branch_records[case1_1_cfg["error_branch"]],
+            branch_ground_truth[case1_1_cfg["error_branch"]],
+            cells=case1_1_cfg["affected_cells"], geometry=cfg7["geometry"],
+        ),
+        "interpretation": (
+            "paired comparison against counterfactual exact coverage in an otherwise non-CCTV cell"
+        ),
+    })
+    render_coverage_gap_case_figure(
+        ARGS.output / "case-1-1-missing-cctv-coverage.png",
+        branch_records[case1_1_cfg["correct_branch"]],
+        branch_records[case1_1_cfg["error_branch"]],
+        branch_ground_truth[case1_1_cfg["error_branch"]],
+        case1_1_cfg["affected_cells"][0],
+    )
+    case1_2_cfg = case_cfg["case_1_2"]
+    case1_2 = pair(case1_2_cfg["correct_branch"], case1_2_cfg["error_branch"])
+    case1_2.update({
+        "case_id": "case_1_2_cctv_sensing_error",
         "information_error": "counterfactual_cctv_corruption",
         "base_cctv_assumption": "exact_at_every_tick",
         "interpretation": "controlled robustness test; not an Actual-DRL sensor claim",
     })
     render_cctv_case_figure(
-        ARGS.output / "case-1-cctv-congestion-error.png",
-        branch_records[case1_cfg["correct_branch"]],
-        branch_records[case1_cfg["error_branch"]],
-        case1_cfg["affected_cells"][0],
+        ARGS.output / "case-1-2-cctv-sensing-error.png",
+        branch_records[case1_2_cfg["correct_branch"]],
+        branch_records[case1_2_cfg["error_branch"]],
+        case1_2_cfg["affected_cells"][0],
     )
     case2_cfg = case_cfg["case_2"]
     case2 = pair(case2_cfg["correct_branch"], case2_cfg["error_branch"])
@@ -465,7 +489,8 @@ def run() -> dict:
          "delta_j_cf": delta_policy},
     )
     result["case_studies"] = {
-        "case_1": case1, "case_2": case2, "case_3": case3,
+        "case_1_1": case1_1, "case_1_2": case1_2,
+        "case_2": case2, "case_3": case3,
         "selection_rule": (
             "candidate only when the comparison cost is higher and the path/outcome diverges"
         ),

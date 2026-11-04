@@ -411,6 +411,10 @@ class DynamicCostmap:
                 simulation_time_s, observations, self.visibility_mask, ground_truth
             )
         self._direct_updates(observations, simulation_time_s, overrides)
+        for event in congestion_logs:
+            if event.get("type") == "coverage_restoration":
+                row, column = event["grid_cell"]
+                self.last_update_type[row][column] = "counterfactual_coverage"
         intention_result = self._intentions(
             observations, simulation_time_s, self.intervention_manager, pedestrians
         )

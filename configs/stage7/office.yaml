@@ -40,6 +40,13 @@ interventions:
     scope: {cells: [[2, 4]]}
     value: 6
     measurement_convention: counterfactual_cctv_corruption
+  - id: restore_missing_cctv_coverage_3_3
+    factor: congestion
+    type: coverage_restoration
+    start_time_s: 0.0
+    end_time_s: 120.0
+    scope: {cells: [[3, 3]]}
+    measurement_convention: counterfactual_additional_coverage
   - id: intention_injected_error_office_04
     factor: intention
     type: incorrect_destination
@@ -70,7 +77,11 @@ experiments:
   - id: cctv_congestion_error
     intervention_ids: [cctv_counterfactual_corruption_2_4]
     baseline_id: original
-    case_study_id: case_1_cctv_congestion_error
+    case_study_id: case_1_2_cctv_sensing_error
+  - id: coverage_restored
+    intervention_ids: [restore_missing_cctv_coverage_3_3]
+    baseline_id: original
+    role: case_1_1_correct_coverage
   - id: correct_intention_partial
     intervention_ids: [full_intention]
     baseline_id: original
@@ -85,7 +96,11 @@ case_studies:
   action_divergence_l2: 0.05
   minimum_cost_increase: 1.0e-6
   crowd_clip: 6.0
-  case_1:
+  case_1_1:
+    correct_branch: coverage_restored
+    error_branch: original
+    affected_cells: [[3, 3]]
+  case_1_2:
     correct_branch: original
     error_branch: cctv_congestion_error
     affected_cells: [[2, 4]]
