@@ -319,12 +319,14 @@ See `docs/stage-6-report.md`.
 ## Stage 7 Office frozen-policy comparison
 
 Stage 7 compares Actual, Full-information, Congestion-error, Intention-error,
-and Combined-error inputs using one frozen Office Recurrent PPO policy. It also
-includes paired branches for a missing-CCTV-coverage crowd encounter, explicit
-counterfactual CCTV corruption, intention-induced freshness error under partial
-coverage, and Full-information DRL versus the Stage 6 time-expanded A*
-reference. Exact CCTV remains the base assumption; restored coverage and
-corrupted sensing are isolated counterfactual controls.
+and Combined-error inputs using one frozen Office Recurrent PPO policy. Its
+case-study branches cover missing CCTV coverage, matched-layout added-CCTV
+false-high sensing, a three-branch intention/freshness mediation ablation, and
+normal DRL versus stuck/oscillating behavior from the same frozen policy. Exact
+installed CCTV remains the base assumption; restored coverage and corrupted
+added-CCTV sensing are explicitly labeled counterfactual controls. The Stage 6
+time-expanded A* trajectory is an auxiliary comparator, not a globally optimal
+baseline.
 
 The repository contains the selected policy, Office occupancy map, and minimum
 matched Stage 6 records required for host decision replay:
@@ -344,5 +346,6 @@ Isaac Lab 2.3.2, Pegasus 5.1, and access to the official NVIDIA assets:
   --seed 15101 --gpu 1 --headless
 ```
 
-See `docs/stage-7-report.md`. The redesigned closed-loop run remains pending;
-Stage 8 has not started.
+See `docs/stage-7-report.md`. The redesigned Case 1-2 and Case 2 closed-loop
+run remains pending; negative results are preserved rather than relabeled as
+failures. Stage 8 has not started.

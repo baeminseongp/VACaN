@@ -358,25 +358,32 @@ class DynamicCostmap:
             events, intervention_logs = intervention_manager.modify_intentions(
                 now, events, observations, pedestrians
             )
+        anchor_reset_cells: set[Cell] = set()
         for event in events:
             destination = tuple(event["destination_grid"])
             if destination in self.cctv_cells:
                 continue
             row, column = destination
             self.intention_incoming[row][column] += int(event.get("contribution", 1))
+            if bool(event.get("anchor_reset", True)):
+                anchor_reset_cells.add(destination)
         for row in range(self.rows):
             for column in range(self.columns):
                 incoming = self.intention_incoming[row][column]
                 if incoming == 0 or (row, column) in self.cctv_cells:
                     continue
                 self.current_cost[row][column] += float(incoming)
-                self.anchor_cost[row][column] = self.current_cost[row][column]
-                self.anchor_timestamp[row][column] = now
-                self.freshness[row][column] = 1.0
                 previous = self.last_update_type[row][column]
-                self.last_update_type[row][column] = (
-                    "robot_observation+intention" if previous == "robot_observation" else "intention"
-                )
+                if (row, column) in anchor_reset_cells:
+                    self.anchor_cost[row][column] = self.current_cost[row][column]
+                    self.anchor_timestamp[row][column] = now
+                    self.freshness[row][column] = 1.0
+                    self.last_update_type[row][column] = (
+                        "robot_observation+intention"
+                        if previous == "robot_observation" else "intention"
+                    )
+                else:
+                    self.last_update_type[row][column] = "intention_no_freshness_reset"
         if intervention_manager is None:
             return events
         return events, intervention_logs
@@ -415,6 +422,11 @@ class DynamicCostmap:
             if event.get("type") == "coverage_restoration":
                 row, column = event["grid_cell"]
                 self.last_update_type[row][column] = "counterfactual_coverage"
+            elif event.get("type") == "coverage_corruption":
+                row, column = event["grid_cell"]
+                self.last_update_type[row][column] = (
+                    "counterfactual_coverage_corruption"
+                )
         intention_result = self._intentions(
             observations, simulation_time_s, self.intervention_manager, pedestrians
         )

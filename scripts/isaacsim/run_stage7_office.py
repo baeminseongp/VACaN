@@ -123,11 +123,13 @@ def run() -> dict:
     from vacan.counterfactual.config import load_stage7_config
     from vacan.counterfactual.case_studies import (
         coverage_gap_metrics, freshness_validity_metrics,
-        paired_freshness_metrics, paired_trajectory_metrics,
+        navigation_behavior_metrics, paired_freshness_metrics,
+        paired_trajectory_metrics,
     )
     from vacan.counterfactual.dataset import (
-        render_cctv_case_figure, render_coverage_gap_case_figure,
-        render_episode_figure, render_freshness_case_figure,
+        render_behavior_failure_figure, render_cctv_case_figure,
+        render_coverage_gap_case_figure, render_episode_figure,
+        render_freshness_case_figure,
     )
     from vacan.counterfactual.intervention import InterventionManager
     from vacan.mapping.dynamic_costmap import DynamicCostmap, load_stage3_config
@@ -361,16 +363,26 @@ def run() -> dict:
         "elapsed_wall_s": time.perf_counter() - started,
         "created_utc": datetime.now(UTC).isoformat(),
     }
-    stage6_comparison = json.loads(
-        (Path(cfg7["resolved_stage6_artifact"]) / "comparison.json").read_text(encoding="utf-8")
-    )
+    reference_path = Path(cfg7["resolved_stage6_artifact"]) / "reference-trajectory.jsonl"
+    if not reference_path.is_file():
+        raise RuntimeError(f"Stage 7 requires Stage 6 reference trajectory: {reference_path}")
+    reference_records = [json.loads(line) for line in reference_path.read_text(
+        encoding="utf-8").splitlines()]
+    reference_success = bool(reference_records[-1].get("goal_reached", False))
+    reference_cost = evaluator.evaluate(
+        reference_records, goal_reached=reference_success
+    ).to_dict()
     result["stage6_auxiliary_reference"] = {
-        "cost": stage6_comparison["reference_cost"],
-        "drl_cost": stage6_comparison["drl_cost"],
-        "delta_j_drl_minus_reference": stage6_comparison["delta_j"],
+        "cost": reference_cost,
+        "drl_cost": by_branch["original"]["cost"],
+        "delta_j_drl_minus_reference": float(
+            by_branch["original"]["cost"]["total"] - reference_cost["total"]
+        ),
+        "cost_recomputed_with_current_shared_evaluator": True,
         "primary_counterfactual_baseline": False,
     }
     case_cfg = cfg7["case_studies"]
+    goal_xy_m = tuple(map(float, stage2["robot"]["goal_xyz"][:2]))
     trajectory_threshold = float(case_cfg["trajectory_divergence_m"])
     action_threshold = float(case_cfg["action_divergence_l2"])
     minimum_cost = float(case_cfg["minimum_cost_increase"])
@@ -411,35 +423,67 @@ def run() -> dict:
         branch_records[case1_1_cfg["correct_branch"]],
         branch_records[case1_1_cfg["error_branch"]],
         branch_ground_truth[case1_1_cfg["error_branch"]],
-        case1_1_cfg["affected_cells"][0],
+        case1_1_cfg["affected_cells"],
+        goal_xy_m,
     )
     case1_2_cfg = case_cfg["case_1_2"]
     case1_2 = pair(case1_2_cfg["correct_branch"], case1_2_cfg["error_branch"])
     case1_2.update({
         "case_id": "case_1_2_cctv_sensing_error",
-        "information_error": "counterfactual_cctv_corruption",
-        "base_cctv_assumption": "exact_at_every_tick",
-        "interpretation": "controlled robustness test; not an Actual-DRL sensor claim",
+        "information_error": "counterfactual_added_cctv_false_high",
+        "base_cctv_assumption": "installed_cctv_exact_at_every_tick",
+        "counterfactual_sensor_layout_matched": True,
+        "interpretation": (
+            "same added-CCTV direct-route cells in both branches; only the "
+            "policy-visible count is corrupted in the error branch"
+        ),
     })
     render_cctv_case_figure(
         ARGS.output / "case-1-2-cctv-sensing-error.png",
         branch_records[case1_2_cfg["correct_branch"]],
         branch_records[case1_2_cfg["error_branch"]],
-        case1_2_cfg["affected_cells"][0],
+        branch_ground_truth[case1_2_cfg["error_branch"]],
+        case1_2_cfg["affected_cells"],
+        goal_xy_m,
     )
     case2_cfg = case_cfg["case_2"]
     case2 = pair(case2_cfg["correct_branch"], case2_cfg["error_branch"])
+    direct_effect = pair(
+        case2_cfg["correct_branch"], case2_cfg["direct_only_branch"]
+    )
+    freshness_mediated_effect = pair(
+        case2_cfg["direct_only_branch"], case2_cfg["error_branch"]
+    )
     affected_cells = case2_cfg["affected_cells"]
     case2.update({
         "case_id": "case_2_intention_induced_freshness_error",
         "information_error": "incorrect_controller_destination",
+        "direct_only_branch": case2_cfg["direct_only_branch"],
+        "intention_direct_effect": direct_effect,
+        "freshness_mediated_effect": freshness_mediated_effect,
+        "freshness_mediated_failure_candidate": freshness_mediated_effect[
+            "navigation_failure_candidate"
+        ],
+        "causal_failure_interpretation_supported": bool(
+            case2["navigation_failure_candidate"]
+            and freshness_mediated_effect["navigation_failure_candidate"]
+        ),
         "freshness_difference": paired_freshness_metrics(
             branch_records[case2_cfg["correct_branch"]],
+            branch_records[case2_cfg["error_branch"]], cells=affected_cells,
+        ),
+        "freshness_mediated_difference": paired_freshness_metrics(
+            branch_records[case2_cfg["direct_only_branch"]],
             branch_records[case2_cfg["error_branch"]], cells=affected_cells,
         ),
         "correct_branch_validity": freshness_validity_metrics(
             branch_records[case2_cfg["correct_branch"]],
             branch_ground_truth[case2_cfg["correct_branch"]],
+            crowd_clip=float(case_cfg["crowd_clip"]), cells=affected_cells,
+        ),
+        "direct_only_branch_validity": freshness_validity_metrics(
+            branch_records[case2_cfg["direct_only_branch"]],
+            branch_ground_truth[case2_cfg["direct_only_branch"]],
             crowd_clip=float(case_cfg["crowd_clip"]), cells=affected_cells,
         ),
         "error_branch_validity": freshness_validity_metrics(
@@ -451,42 +495,89 @@ def run() -> dict:
     render_freshness_case_figure(
         ARGS.output / "case-2-intention-freshness-error.png",
         branch_records[case2_cfg["correct_branch"]],
-        branch_records[case2_cfg["error_branch"]], affected_cells,
+        branch_records[case2_cfg["direct_only_branch"]],
+        branch_records[case2_cfg["error_branch"]], affected_cells, goal_xy_m,
     )
-    reference_path = Path(cfg7["resolved_stage6_artifact"]) / "reference-trajectory.jsonl"
-    if not reference_path.is_file():
-        raise RuntimeError(f"Case 3 requires Stage 6 reference trajectory: {reference_path}")
-    reference_records = [json.loads(line) for line in reference_path.read_text(
-        encoding="utf-8").splitlines()]
     case3_cfg = case_cfg["case_3"]
-    drl_branch = case3_cfg["drl_branch"]
+    normal_branch = case3_cfg["normal_branch"]
+    failing_branch = case3_cfg["failing_branch"]
     case3 = paired_trajectory_metrics(
-        reference_records, branch_records[drl_branch],
+        branch_records[normal_branch], branch_records[failing_branch],
         trajectory_threshold_m=trajectory_threshold, action_threshold_l2=action_threshold,
     )
-    reference_cost = stage6_comparison["reference_cost"]
-    delta_policy = float(by_branch[drl_branch]["cost"]["total"] - reference_cost["total"])
-    reference_success = float(reference_cost["terminal_failure"]) == 0.0
+    behavior_cfg = case3_cfg["behavior_detection"]
+    behavior_kwargs = {
+        "goal_xy_m": goal_xy_m,
+        "window_s": float(behavior_cfg["window_s"]),
+        "stuck_max_displacement_m": float(
+            behavior_cfg["stuck_max_displacement_m"]
+        ),
+        "stuck_max_goal_progress_m": float(
+            behavior_cfg["stuck_max_goal_progress_m"]
+        ),
+        "oscillation_max_displacement_m": float(
+            behavior_cfg["oscillation_max_displacement_m"]
+        ),
+        "oscillation_min_yaw_travel_rad": float(
+            behavior_cfg["oscillation_min_yaw_travel_rad"]
+        ),
+        "oscillation_min_angular_reversals": int(
+            behavior_cfg["oscillation_min_angular_reversals"]
+        ),
+        "angular_deadband_rad_s": float(
+            behavior_cfg["angular_deadband_rad_s"]
+        ),
+    }
+    normal_behavior = navigation_behavior_metrics(
+        branch_records[normal_branch], **behavior_kwargs
+    )
+    failing_behavior = navigation_behavior_metrics(
+        branch_records[failing_branch], **behavior_kwargs
+    )
+    delta_policy = float(
+        by_branch[failing_branch]["cost"]["total"]
+        - by_branch[normal_branch]["cost"]["total"]
+    )
+    normal_valid = bool(
+        normal_behavior["goal_reached"] and not normal_behavior["collision"]
+        and not normal_behavior["stuck_detected"]
+        and not normal_behavior["oscillation_detected"]
+    )
+    failing_pattern = bool(
+        failing_behavior["stuck_detected"]
+        and failing_behavior["oscillation_detected"]
+    )
     case3.update({
-        "case_id": "case_3_policy_limitation_vs_time_expanded_astar",
-        "drl_branch": drl_branch,
-        "reference": case3_cfg["reference"],
-        "drl_cost": by_branch[drl_branch]["cost"],
-        "reference_cost": reference_cost,
-        "delta_j_drl_minus_reference": delta_policy,
-        "reference_success": reference_success,
+        "case_id": "case_3_stuck_and_oscillation_policy_failure",
+        "normal_branch": normal_branch,
+        "failing_branch": failing_branch,
+        "normal_cost": by_branch[normal_branch]["cost"],
+        "failing_cost": by_branch[failing_branch]["cost"],
+        "delta_j_failing_minus_normal": delta_policy,
+        "normal_behavior": normal_behavior,
+        "failing_behavior": failing_behavior,
+        "normal_behavior_valid": normal_valid,
+        "failing_stuck_and_oscillation": failing_pattern,
         "navigation_failure_candidate": bool(
-            reference_success and delta_policy > minimum_cost
+            normal_valid and failing_pattern and delta_policy > minimum_cost
             and case3["path_difference_observed"]
+        ),
+        "failing_condition": "full_information_input_to_same_frozen_policy",
+        "policy_parameters_modified": False,
+        "auxiliary_reference": case3_cfg["auxiliary_reference"],
+        "auxiliary_reference_cost": reference_cost,
+        "delta_j_normal_minus_auxiliary_reference": float(
+            by_branch[normal_branch]["cost"]["total"] - reference_cost["total"]
+        ),
+        "delta_j_failing_minus_auxiliary_reference": float(
+            by_branch[failing_branch]["cost"]["total"] - reference_cost["total"]
         ),
         "global_optimality_claimed": False,
     })
-    render_episode_figure(
-        ARGS.output / "case-3-full-information-vs-astar.png",
-        reference_records, branch_records[drl_branch],
-        {"original_cost": reference_cost,
-         "counterfactual_cost": by_branch[drl_branch]["cost"],
-         "delta_j_cf": delta_policy},
+    render_behavior_failure_figure(
+        ARGS.output / "case-3-normal-vs-stuck-oscillating-drl.png",
+        branch_records[normal_branch], branch_records[failing_branch],
+        normal_behavior, failing_behavior, behavior_kwargs["goal_xy_m"],
     )
     result["case_studies"] = {
         "case_1_1": case1_1, "case_1_2": case1_2,

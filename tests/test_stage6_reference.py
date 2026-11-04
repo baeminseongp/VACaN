@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from vacan.mapping.dynamic_costmap import GridGeometry
 from vacan.mapping.static_map import OccupancyMap2D
@@ -83,6 +84,7 @@ def test_reference_controller_respects_velocity_limits():
 
 def test_shared_cost_and_delta_j_use_identical_evaluator():
     config = load_stage6_config(ROOT / "configs/stage6/office.yaml")
+    assert config["shared_cost"]["objective"] == "trajectory_efficiency"
     evaluator = SharedNavigationCost(config["shared_cost"])
     reference_samples = [
         {"simulation_time_s": 0.0, "position_xy_m": [0.0, 0.0], "action": [0.0, 0.0]},
@@ -94,6 +96,13 @@ def test_shared_cost_and_delta_j_use_identical_evaluator():
     ]
     reference = evaluator.evaluate(reference_samples, goal_reached=True)
     drl = evaluator.evaluate(drl_samples, goal_reached=False)
+    assert reference.trajectory_efficiency == pytest.approx(
+        reference.weighted_time + reference.weighted_length
+        + reference.weighted_smoothness
+    )
+    assert drl.total == pytest.approx(
+        drl.trajectory_efficiency + drl.context_penalty + drl.safety_penalty
+    )
     comparison = compare_costs(drl, reference, drl_success=False, reference_success=True,
                                tolerance=1e-6)
     assert comparison.delta_j == drl.total - reference.total

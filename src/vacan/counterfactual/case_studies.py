@@ -99,6 +99,115 @@ def paired_trajectory_metrics(
     }
 
 
+def navigation_behavior_metrics(
+    records: list[dict[str, Any]],
+    *,
+    goal_xy_m: tuple[float, float],
+    window_s: float,
+    stuck_max_displacement_m: float,
+    stuck_max_goal_progress_m: float,
+    oscillation_max_displacement_m: float,
+    oscillation_min_yaw_travel_rad: float,
+    oscillation_min_angular_reversals: int,
+    angular_deadband_rad_s: float,
+) -> dict[str, Any]:
+    """Detect low-progress stuck windows and in-place steering oscillation.
+
+    A stuck event requires low net displacement and low progress toward the
+    goal over a complete fixed-duration window. Oscillation additionally
+    requires substantial accumulated yaw motion and repeated angular-command
+    reversals while net displacement remains small.
+    """
+    if len(records) < 2:
+        raise ValueError("behavior analysis requires at least two trajectory records")
+    if window_s <= 0:
+        raise ValueError("behavior window must be positive")
+    times = np.asarray([item["simulation_time_s"] for item in records], dtype=float)
+    positions = np.asarray([item["position_xy_m"] for item in records], dtype=float)
+    yaws = np.unwrap(np.asarray([item["yaw_rad"] for item in records], dtype=float))
+    actions = np.asarray([item.get("action", (0.0, 0.0)) for item in records], dtype=float)
+    goal = np.asarray(goal_xy_m, dtype=float)
+    goal_distances = np.linalg.norm(positions - goal, axis=1)
+    sample_dt = float(np.median(np.diff(times)))
+    windows: list[dict[str, Any]] = []
+    for start in range(len(records) - 1):
+        end = int(np.searchsorted(times, times[start] + window_s, side="left"))
+        if end >= len(records) or times[end] - times[start] < window_s - sample_dt / 2:
+            continue
+        segment_positions = positions[start:end + 1]
+        displacement = float(np.linalg.norm(positions[end] - positions[start]))
+        path_length = float(np.linalg.norm(
+            np.diff(segment_positions, axis=0), axis=1
+        ).sum())
+        goal_progress = float(goal_distances[start] - goal_distances[end])
+        yaw_travel = float(np.abs(np.diff(yaws[start:end + 1])).sum())
+        angular = actions[start:end + 1, 1]
+        signs = np.where(
+            angular > angular_deadband_rad_s, 1,
+            np.where(angular < -angular_deadband_rad_s, -1, 0),
+        )
+        nonzero = signs[signs != 0]
+        reversals = int(np.sum(nonzero[1:] != nonzero[:-1])) if len(nonzero) > 1 else 0
+        stuck = bool(
+            displacement <= stuck_max_displacement_m
+            and goal_progress <= stuck_max_goal_progress_m
+        )
+        oscillation = bool(
+            displacement <= oscillation_max_displacement_m
+            and yaw_travel >= oscillation_min_yaw_travel_rad
+            and reversals >= oscillation_min_angular_reversals
+        )
+        windows.append({
+            "start_time_s": float(times[start]),
+            "end_time_s": float(times[end]),
+            "net_displacement_m": displacement,
+            "path_length_m": path_length,
+            "goal_progress_m": goal_progress,
+            "yaw_travel_rad": yaw_travel,
+            "angular_reversals": reversals,
+            "stuck": stuck,
+            "oscillation": oscillation,
+        })
+    stuck_windows = [item for item in windows if item["stuck"]]
+    oscillation_windows = [item for item in windows if item["oscillation"]]
+    return {
+        "window_s": float(window_s),
+        "goal_reached": bool(records[-1].get("goal_reached", False)),
+        "collision": any(bool(item.get("collision", False)) for item in records),
+        "minimum_goal_distance_m": float(goal_distances.min()),
+        "final_goal_distance_m": float(goal_distances[-1]),
+        "goal_regression_after_closest_approach_m": float(
+            goal_distances[-1] - goal_distances.min()
+        ),
+        "stuck_detected": bool(stuck_windows),
+        "stuck_window_count": len(stuck_windows),
+        "first_stuck_window": None if not stuck_windows else stuck_windows[0],
+        "minimum_window_displacement_m": min(
+            (item["net_displacement_m"] for item in windows), default=0.0
+        ),
+        "oscillation_detected": bool(oscillation_windows),
+        "oscillation_window_count": len(oscillation_windows),
+        "first_oscillation_window": (
+            None if not oscillation_windows else oscillation_windows[0]
+        ),
+        "maximum_low_displacement_yaw_travel_rad": max(
+            (item["yaw_travel_rad"] for item in windows
+             if item["net_displacement_m"] <= oscillation_max_displacement_m),
+            default=0.0,
+        ),
+        "thresholds": {
+            "stuck_max_displacement_m": float(stuck_max_displacement_m),
+            "stuck_max_goal_progress_m": float(stuck_max_goal_progress_m),
+            "oscillation_max_displacement_m": float(oscillation_max_displacement_m),
+            "oscillation_min_yaw_travel_rad": float(oscillation_min_yaw_travel_rad),
+            "oscillation_min_angular_reversals": int(
+                oscillation_min_angular_reversals
+            ),
+            "angular_deadband_rad_s": float(angular_deadband_rad_s),
+        },
+    }
+
+
 def _truth_at(
     truth_times: np.ndarray, truth_layers: np.ndarray, timestamp: float
 ) -> np.ndarray:

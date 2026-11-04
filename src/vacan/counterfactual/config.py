@@ -57,11 +57,22 @@ def load_stage7_config(path: Path) -> dict[str, Any]:
     referenced = {
         cases["case_1_1"].get("correct_branch"), cases["case_1_1"].get("error_branch"),
         cases["case_1_2"].get("correct_branch"), cases["case_1_2"].get("error_branch"),
-        cases["case_2"].get("correct_branch"), cases["case_2"].get("error_branch"),
-        cases["case_3"].get("drl_branch"),
+        cases["case_2"].get("correct_branch"), cases["case_2"].get("direct_only_branch"),
+        cases["case_2"].get("error_branch"),
+        cases["case_3"].get("normal_branch"), cases["case_3"].get("failing_branch"),
     }
     if not referenced <= available_branches:
         raise ValueError(f"case studies reference unknown branches {sorted(referenced - available_branches)}")
+    behavior = cases["case_3"].get("behavior_detection", {})
+    positive_behavior_fields = {
+        "window_s", "stuck_max_displacement_m", "stuck_max_goal_progress_m",
+        "oscillation_max_displacement_m", "oscillation_min_yaw_travel_rad",
+        "angular_deadband_rad_s",
+    }
+    if any(float(behavior.get(key, 0)) <= 0 for key in positive_behavior_fields):
+        raise ValueError("case_3 behavior detection thresholds must be positive")
+    if int(behavior.get("oscillation_min_angular_reversals", 0)) <= 0:
+        raise ValueError("case_3 oscillation reversal threshold must be positive")
     if float(data.get("comparison_tolerance", -1)) < 0:
         raise ValueError("comparison_tolerance must be non-negative")
     return data

@@ -5,7 +5,8 @@ The implementation retains the five information conditions and adds the paired
 branches required for the case studies: missing crowd information in a
 non-CCTV region, counterfactual CCTV congestion corruption,
 intention-induced freshness error under partial coverage, and a
-full-information DRL comparison with the Stage 6 reference planner.
+normal-DRL comparison against stuck/oscillating behavior from the same frozen
+policy. The Stage 6 reference planner remains an auxiliary comparator.
 
 Stage 7 is **in progress**. Host-side decision replay and unit tests pass for
 the new design. The closed-loop Isaac Sim case-study run must be executed again
@@ -30,10 +31,10 @@ The case-study-specific paired branches are:
 
 | Case | Correct/reference condition | Comparison condition |
 |---|---|---|
-| 1-1. Missing CCTV coverage | exact counterfactual coverage in non-CCTV cell `[3,3]` | Actual partial coverage |
-| 1-2. CCTV sensing error | Actual DRL with exact CCTV | identical DRL with explicitly corrupted CCTV cell `[2,4]` |
-| 2. Intention/freshness error | partial coverage with Pegasus controller intention | identical partial coverage with `office_04` redirected to `[2,2]` |
-| 3. Policy limitation | Stage 6 time-expanded A* | Full-information frozen DRL |
+| 1-1. Missing CCTV coverage | exact counterfactual coverage in the six-cell central non-CCTV region | Actual partial coverage |
+| 1-2. CCTV sensing error | exact counts from the same two added direct-route CCTV cells | false-high counts from those same added CCTV cells |
+| 2. Intention/freshness error | correct intention | wrong intention without anchor reset, then wrong intention with erroneous freshness reset |
+| 3. Stuck/oscillation policy failure | successful Actual DRL | failing Full-information branch of the same frozen DRL |
 
 This design isolates information-condition changes from learning. It does not
 train, fine-tune, or duplicate policies. A better Full-information trajectory
@@ -43,6 +44,16 @@ distribution, so privileged inputs can also create distribution shift.
 The Stage 6 time-expanded reference planner is not a sixth DRL branch and is
 not treated as globally optimal. Its shared navigation cost is used only to
 help judge whether a DRL trajectory is inefficient.
+
+Case 3 primarily compares two executions of the same frozen policy. The normal
+Actual branch must reach the goal without a detected stuck or oscillation
+window. The failing branch must exhibit both behaviors. A three-second window
+is `stuck` when net displacement is at most 0.15 m and goal progress is at most
+0.10 m. It is `oscillation` when net displacement is at most 0.25 m, accumulated
+yaw travel is at least 0.75 rad, and the executed angular command reverses sign
+at least twice outside a 0.15 rad/s deadband. Collision and failure remain
+separate outcome evidence. The Stage 6 A* trajectory is retained only as an
+auxiliary efficiency reference, not as the primary Case 3 comparator.
 
 ## 2. Information semantics
 
@@ -70,29 +81,47 @@ pedestrian's realized future trajectory.
 The controlled Office errors are:
 
 - Congestion error: add 3 people to cell `[3, 3]` on top of its exact count.
-- Intention error: replace `office_04`'s controller destination with cell
-  `[2, 2]`.
+- Intention error: replace the controller destinations for `office_04`,
+  `office_10`, and `office_11` with direct-route/goal cell `[3,3]`. This is an
+  explicitly labeled multi-person stress intervention used to make the
+  intention/freshness effect observable with the frozen policy.
 - Combined error: apply both changes to the same full-information state.
-- CCTV case-study error: expose count 6 in CCTV cell `[2,4]` from 0–12 s.
-- Missing-coverage control: expose the exact count in otherwise non-CCTV cell
-  `[3,3]`; the comparison branch retains the original sensing gap.
+- CCTV case-study error: both paired branches add exact coverage over the same
+  central region; the error branch alone exposes count 6 in direct-route cells
+  `[2,3]` and `[3,3]` from 0–20 s.
+- Missing-coverage control: expose exact counts in the otherwise non-CCTV
+  central corridor (`[2,2]`, `[2,3]`, `[3,2]`, `[3,3]`, `[4,2]`, `[4,3]`);
+  the comparison branch retains the original sensing gap.
 
-Normal and Actual branches continue to receive exact CCTV counts at every tick.
-The CCTV case is explicitly labeled `counterfactual_cctv_corruption`; exact
-simulator counts remain in the privileged log and are never mutated. It is a
-robustness experiment, not a claim that base VACaN CCTV observations are noisy.
+Normal and Actual branches continue to receive exact installed-CCTV counts at
+every tick. The paired Case 1-2 sensor layout is identical: both branches use
+the same counterfactual added-CCTV region, and only the error branch corrupts
+the two direct-route counts. It is explicitly labeled
+`counterfactual_added_cctv_corruption`; exact simulator counts remain in the
+privileged log and are never mutated. This is a controlled robustness study,
+not a claim that base VACaN CCTV observations are noisy.
 
 Case 1-1 retains the original CCTV layout. `coverage_restored` is a privileged
-counterfactual control for the single non-CCTV cell, not a change to Actual
+counterfactual control for the central non-CCTV region, not a change to Actual
 DRL. The exported metrics record the policy-visible estimate, exact crowd
-count, visibility, last update source, whether the robot is inside the target
+count, visibility, last update source, whether the robot is inside each target
 cell, and maximum crowd underestimation.
 
-Case 2 does not use full congestion. Both branches retain the same limited FOV,
-and only the controller destination differs. The wrong destination resets the
-wrong cell's anchor and freshness. Ground-Truth validity is computed offline as
+Case 2 does not use full congestion. All three branches retain the same limited
+FOV. The direct-only ablation moves the three destination contributions but
+does not reset their cost anchors. The full error branch applies the same wrong
+destinations and also resets the wrong cell's anchor timestamp and freshness.
+Thus `direct-only - correct` measures the intention contribution and
+`full-error - direct-only` measures the freshness-mediated addition.
+Ground-Truth validity is computed offline as
 `1-min(abs(N_gt(t)-N_gt(anchor_t))/crowd_clip,1)` and is never given to the
 policy.
+
+The case figures contain three evidence panels: paired world-frame paths with
+the maximum-separation segment marked, paired separation over simulation time,
+and the relevant aggregate input/freshness signal. The 0.75 m candidate
+threshold remains visible in the separation panel. The plotting code does not
+rescale trajectory coordinates independently or fabricate route separation.
 
 Congestion and Intention remain independently logged. Freshness is not an
 independent intervention factor. A no-op branch is retained as a validation
@@ -132,7 +161,11 @@ The runner resets every branch with the same scenario seed and resolved
 pedestrian routes. Nova Carter remains physically controlled through the
 differential-drive interface; counterfactual trajectories are not teleported
 or forced to match after branching. Every closed-loop result is evaluated by
-the same Stage 6 `SharedNavigationCost` implementation.
+the same Stage 6 `SharedNavigationCost` implementation. Its primary subtotal
+is trajectory efficiency (`time + 5*length + 0.05*smoothness`); social cost is
+secondary, while collision and terminal failure remain explicit safety
+penalties. The Stage 6 reference trajectory is rescored with the current
+evaluator instead of reusing a stale cost stored in an older artifact.
 
 ## 5. Host decision-replay evidence
 

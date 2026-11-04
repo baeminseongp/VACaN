@@ -22,6 +22,9 @@ class CostBreakdown:
     weighted_social: float
     weighted_smoothness: float
     weighted_terminal_failure: float
+    trajectory_efficiency: float
+    context_penalty: float
+    safety_penalty: float
     total: float
 
     def to_dict(self) -> dict[str, float | int]:
@@ -30,6 +33,9 @@ class CostBreakdown:
 
 class SharedNavigationCost:
     def __init__(self, config: dict[str, Any]) -> None:
+        self.objective = str(config.get("objective", "composite_navigation"))
+        if self.objective not in {"composite_navigation", "trajectory_efficiency"}:
+            raise ValueError(f"unsupported navigation cost objective {self.objective}")
         self.weights = {key: float(value) for key, value in config["weights"].items()}
         self.personal_space = float(config["personal_space_m"])
         self.max_linear = float(config["normalization"]["max_linear_m_s"])
@@ -69,9 +75,15 @@ class SharedNavigationCost:
             "smoothness": self.weights["smoothness"] * smoothness,
             "failure": self.weights["terminal_failure"] * failure,
         }
+        trajectory_efficiency = (
+            weighted["time"] + weighted["length"] + weighted["smoothness"]
+        )
+        context_penalty = weighted["social"]
+        safety_penalty = weighted["collision"] + weighted["failure"]
         return CostBreakdown(
             elapsed, length, collisions, social, smoothness, failure,
             weighted["time"], weighted["length"], weighted["collision"],
             weighted["social"], weighted["smoothness"], weighted["failure"],
-            float(sum(weighted.values())),
+            float(trajectory_efficiency), float(context_penalty), float(safety_penalty),
+            float(trajectory_efficiency + context_penalty + safety_penalty),
         )

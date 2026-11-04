@@ -22,15 +22,16 @@ reference:
   angular_gain: 1.8
   waypoint_tolerance_m: 0.25
 shared_cost:
+  objective: trajectory_efficiency
   weights:
     time: 1.0
-    length: 2.0
-    collision: 50.0
-    social: 10.0
-    smoothness: 0.1
+    length: 5.0
+    collision: 100.0
+    social: 1.0
+    smoothness: 0.05
     terminal_failure: 1.0
   personal_space_m: 0.8
-  terminal_failure_penalty: 120.0
+  terminal_failure_penalty: 300.0
   normalization: {max_linear_m_s: 0.6, max_angular_rad_s: 1.0}
 comparison:
   inefficiency_tolerance: 1.0e-6

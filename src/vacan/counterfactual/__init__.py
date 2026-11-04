@@ -2,7 +2,7 @@
 
 from .case_studies import (
     coverage_gap_metrics, freshness_validity_metrics,
-    paired_freshness_metrics,
+    navigation_behavior_metrics, paired_freshness_metrics,
     paired_trajectory_metrics,
 )
 
@@ -20,7 +20,8 @@ from .policy import (
 )
 
 __all__ = [
-    "coverage_gap_metrics", "freshness_validity_metrics", "paired_freshness_metrics",
+    "coverage_gap_metrics", "freshness_validity_metrics", "navigation_behavior_metrics",
+    "paired_freshness_metrics",
     "paired_trajectory_metrics",
     "InterventionManager", "InterventionSpec", "decision_costmap_intervention",
     "load_stage7_config", "parse_intervention", "resolve_scope",

@@ -83,9 +83,11 @@ def parse_intervention(raw: dict[str, Any], geometry: GridGeometry) -> Intervent
         raise ValueError("Stage 7 factor must be congestion or intention")
     supported = {
         "congestion": {"overestimate", "underestimate", "ground_truth_correction",
-                       "full_information", "coverage_restoration", "cctv_corruption", "no_op"},
+                       "full_information", "coverage_restoration", "coverage_corruption",
+                       "cctv_corruption", "no_op"},
         "intention": {"incorrect_destination", "missing", "spurious",
-                      "ground_truth_correction", "full_information", "no_op"},
+                      "incorrect_destination_no_freshness", "ground_truth_correction",
+                      "full_information", "no_op"},
     }
     if kind not in supported[factor]:
         raise ValueError(f"unsupported {factor} intervention type {kind}")
@@ -139,16 +141,27 @@ class InterventionManager:
                     raise ValueError(
                         f"{spec.intervention_id}: restored coverage must be explicitly labeled"
                     )
+            if spec.intervention_type == "coverage_corruption":
+                if not spec.cells or set(spec.cells) & cctv_cells:
+                    raise ValueError(
+                        f"{spec.intervention_id}: coverage_corruption targets added non-CCTV cells"
+                    )
+                if spec.measurement_convention != "counterfactual_added_cctv_corruption":
+                    raise ValueError(
+                        f"{spec.intervention_id}: added CCTV corruption must be explicitly labeled"
+                    )
             if spec.factor == "congestion" and not spec.cells and spec.intervention_type not in {
                     "no_op", "full_information"}:
                 raise ValueError(f"{spec.intervention_id}: congestion intervention needs cells")
-            if spec.intervention_type in {"incorrect_destination", "ground_truth_correction"} \
+            if spec.intervention_type in {"incorrect_destination",
+                    "incorrect_destination_no_freshness", "ground_truth_correction"} \
                     and spec.factor == "intention" and spec.destination_grid is None:
                 raise ValueError(f"{spec.intervention_id}: destination_grid is required")
             if spec.intervention_type == "spurious" and (not spec.pedestrian_id or not spec.event_id):
                 raise ValueError("spurious intention requires identified pedestrian_id and event_id")
             if spec.factor == "intention" and spec.intervention_type in {
-                    "incorrect_destination", "ground_truth_correction", "spurious"}:
+                    "incorrect_destination", "incorrect_destination_no_freshness",
+                    "ground_truth_correction", "spurious"}:
                 if spec.destination_grid is None:
                     raise ValueError(f"{spec.intervention_id}: intention destination is required")
                 row, column = spec.destination_grid
@@ -238,12 +251,16 @@ class InterventionManager:
                 continue
             for cell in spec.cells:
                 row, column = cell
-                if (spec.intervention_type != "coverage_restoration"
+                if (spec.intervention_type not in {"coverage_restoration", "coverage_corruption"}
                         and not visibility_mask[row][column] and cell not in overrides):
                     continue
                 original = float(overrides.get(cell, counts.get(cell, 0)))
                 if spec.intervention_type == "coverage_restoration":
                     modified = float(ground_truth_counts[row][column])
+                elif spec.intervention_type == "coverage_corruption":
+                    modified = self._corrupted_value(
+                        spec, float(ground_truth_counts[row][column])
+                    )
                 elif spec.intervention_type == "ground_truth_correction":
                     if spec.measurement_convention != "full_grid_count":
                         raise ValueError("only explicitly labeled full_grid_count correction is supported")
@@ -269,6 +286,12 @@ class InterventionManager:
                     "measurement_convention": spec.measurement_convention or "noisy_fov_assignment",
                     "resulting_costmap_delta": modified - original, "anchor_reset": True,
                 }
+                if spec.intervention_type == "coverage_corruption":
+                    event["observation_source"] = "counterfactual_added_cctv"
+                    event["exact_added_cctv_count"] = int(
+                        ground_truth_counts[row][column]
+                    )
+                    event["base_research_assumption_preserved"] = True
                 tick_logs.append(event)
         self.logs.extend(copy.deepcopy(tick_logs))
         return overrides, tick_logs
@@ -334,9 +357,13 @@ class InterventionManager:
                 if spec.intervention_type == "missing":
                     modified_events.remove(event)
                     new_destination, new_contribution = None, 0
-                elif spec.intervention_type in {"incorrect_destination", "ground_truth_correction"}:
+                elif spec.intervention_type in {"incorrect_destination",
+                        "incorrect_destination_no_freshness", "ground_truth_correction"}:
                     event["destination_grid"] = list(spec.destination_grid)
                     event["source"] = f"counterfactual_{spec.intervention_type}"
+                    event["anchor_reset"] = (
+                        spec.intervention_type != "incorrect_destination_no_freshness"
+                    )
                     new_destination, new_contribution = list(spec.destination_grid), original_contribution
                 else:
                     new_destination, new_contribution = list(event["destination_grid"]), 1
@@ -360,7 +387,7 @@ class InterventionManager:
                     "affected_grid_cells": [cell for cell in (original_destination, new_destination)
                                             if cell is not None],
                     "resulting_costmap_delta_by_cell": delta_by_cell,
-                    "anchor_reset": new_contribution > 0,
+                    "anchor_reset": bool(event.get("anchor_reset", new_contribution > 0)),
                 }
                 tick_logs.append(log)
         self.logs.extend(copy.deepcopy(tick_logs))
@@ -411,6 +438,10 @@ def decision_costmap_intervention(costmap: list[list[float]], diagnostics: dict[
                             spec.measurement_convention != "counterfactual_additional_coverage":
                         raise ValueError("decision correction has an invalid measurement label")
                 modified = float(ground_truth[row][column])
+            elif spec.intervention_type == "coverage_corruption":
+                modified = InterventionManager._corrupted_value(
+                    spec, float(ground_truth[row][column])
+                )
             elif spec.value is not None:
                 modified = spec.value
             else:
@@ -464,5 +495,7 @@ def decision_costmap_intervention(costmap: list[list[float]], diagnostics: dict[
             result[old[0]][old[1]] -= 1.0
             result[new[0]][new[1]] += 1.0
         logs.append({"pedestrian_id": event["pedestrian_id"], "original_destination": list(old),
-                     "modified_destination": None if new is None else list(new), "factor": "intention"})
+                     "modified_destination": None if new is None else list(new),
+                     "anchor_reset": spec.intervention_type != "incorrect_destination_no_freshness",
+                     "factor": "intention"})
     return result, logs

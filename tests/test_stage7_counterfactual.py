@@ -11,7 +11,8 @@ from sb3_contrib import RecurrentPPO
 from vacan.counterfactual.config import load_stage7_config
 from vacan.counterfactual.case_studies import (
     coverage_gap_metrics, freshness_validity_metrics,
-    paired_freshness_metrics, paired_trajectory_metrics,
+    navigation_behavior_metrics, paired_freshness_metrics,
+    paired_trajectory_metrics,
 )
 from vacan.counterfactual.intervention import (
     InterventionManager, InterventionSpec, decision_costmap_intervention, resolve_scope,
@@ -66,6 +67,37 @@ def test_stage7_office_config_has_exactly_two_factors_and_frozen_policy():
     assert value["policy"]["frozen"] is True
     assert {item.factor for item in value["parsed_interventions"]} == {"congestion", "intention"}
     assert {"case_1_1", "case_1_2", "case_2", "case_3"} <= set(value["case_studies"])
+    assert value["case_studies"]["case_3"]["normal_branch"] == "original"
+    assert value["case_studies"]["case_3"]["failing_branch"] == "full_information"
+
+
+def test_stuck_and_oscillation_are_absent_in_progress_and_detected_in_place():
+    normal = [
+        {"simulation_time_s": float(index), "position_xy_m": [float(index), 0.0],
+         "yaw_rad": 0.0, "action": [0.5, 0.0], "goal_reached": index == 4}
+        for index in range(5)
+    ]
+    failing = [
+        {"simulation_time_s": float(index),
+         "position_xy_m": [0.02 * (index % 2), 0.0],
+         "yaw_rad": 0.4 * (index % 2),
+         "action": [0.02, 0.5 if index % 2 else -0.5], "goal_reached": False}
+        for index in range(5)
+    ]
+    kwargs = {
+        "goal_xy_m": (4.0, 0.0), "window_s": 3.0,
+        "stuck_max_displacement_m": 0.15, "stuck_max_goal_progress_m": 0.1,
+        "oscillation_max_displacement_m": 0.25,
+        "oscillation_min_yaw_travel_rad": 0.75,
+        "oscillation_min_angular_reversals": 2,
+        "angular_deadband_rad_s": 0.15,
+    }
+    normal_metrics = navigation_behavior_metrics(normal, **kwargs)
+    failing_metrics = navigation_behavior_metrics(failing, **kwargs)
+    assert not normal_metrics["stuck_detected"]
+    assert not normal_metrics["oscillation_detected"]
+    assert failing_metrics["stuck_detected"]
+    assert failing_metrics["oscillation_detected"]
 
 
 def test_scope_supports_cells_rectangle_and_polygon():
@@ -209,6 +241,49 @@ def test_coverage_restoration_updates_invisible_non_cctv_cell_from_exact_count()
                 cells=((0, 0),), value=3,
             )
         ], geometry, {(0, 0)})
+
+
+def test_added_cctv_corruption_is_explicit_and_preserves_privileged_truth():
+    geometry = GridGeometry((0, 0), (4, 4), 1)
+    item = InterventionSpec(
+        "added-cctv-error", "congestion", "coverage_corruption", 0, 2,
+        cells=((2, 2),), value=6,
+        measurement_convention="counterfactual_added_cctv_corruption",
+    )
+    manager = InterventionManager([item], geometry, {(0, 0)})
+    truth = [[0] * 4 for _ in range(4)]
+    truth[2][2] = 2
+    overrides, logs = manager.modify_congestion(
+        1.0, [], [[False] * 4 for _ in range(4)], truth
+    )
+    assert overrides[(2, 2)] == 6
+    assert truth[2][2] == 2
+    assert logs[0]["exact_added_cctv_count"] == 2
+    assert logs[0]["base_research_assumption_preserved"] is True
+
+
+def test_incorrect_intention_without_freshness_does_not_reset_anchor():
+    value = config()
+    costmap = DynamicCostmap(value, 1)
+    costmap.current_cost[2][2] = 1.0
+    costmap.anchor_cost[2][2] = 1.0
+    costmap.anchor_timestamp[2][2] = 4.0
+    costmap.freshness[2][2] = 0.5
+
+    class NoResetManager:
+        @staticmethod
+        def modify_intentions(now, events, observations, pedestrians):
+            return ([{"event_id": "wrong", "pedestrian_id": "p",
+                      "destination_grid": [2, 2], "contribution": 1,
+                      "anchor_reset": False}], [])
+
+    events, _ = costmap._intentions([], 10.0, NoResetManager(), [])
+    assert events[0]["anchor_reset"] is False
+    assert costmap.current_cost[2][2] == 2.0
+    assert costmap.anchor_cost[2][2] == 1.0
+    assert costmap.anchor_timestamp[2][2] == 4.0
+    assert costmap.freshness[2][2] == 0.5
+    assert costmap.last_update_type[2][2] == "intention_no_freshness_reset"
 
 
 def test_intention_replacement_missing_and_spurious_are_event_aware():

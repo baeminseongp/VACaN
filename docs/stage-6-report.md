@@ -52,11 +52,13 @@ yielding. They do not implement SFM/ORCA and do not explicitly react to Nova
 Carter, so matched resets reproduce their initial conditions and controller
 configuration.
 
-## 3. Shared navigation cost
+## 3. Shared trajectory-efficiency cost
 
 The evaluator is separate from the PPO reward:
 
-`J = 1*time + 2*length + 50*collision + 10*social + 0.1*smoothness + failure`
+`J_eff = 1*time + 5*length + 0.05*smoothness`
+
+`J = J_eff + 1*social + 100*collision + terminal_failure`
 
 - Time is seconds of actual execution.
 - Length is meters of actual robot displacement.
@@ -64,12 +66,25 @@ The evaluator is separate from the PPO reward:
 - Social cost integrates normalized personal-space penetration below 0.8 m over
   simulation time.
 - Smoothness sums normalized changes in executed linear/angular commands.
-- An unsuccessful episode receives a 120-unit terminal failure penalty.
+- `J_eff` is the primary trajectory-efficiency subtotal. Distance has the
+  largest continuous weight so unnecessary detours dominate small social or
+  control variations; elapsed time is the second major term.
+- Social cost is retained as a reported contextual penalty but reduced from
+  weight 10 to weight 1 so it cannot normally reverse a clear distance/time
+  efficiency result.
+- Collision and goal completion remain safety gates rather than efficiency
+  rewards. A collision costs 100 and an unsuccessful episode receives a
+  300-unit terminal failure penalty.
 - `Delta_J = J_DRL - J_Reference`; inefficiency requires `Delta_J > 1e-6`.
 
 The same `SharedNavigationCost` instance evaluates both methods. A positive
 Delta J identifies relative inefficiency only; it does not assign Congestion,
 Intention, or Freshness causality.
+
+Every cost record separately stores `trajectory_efficiency`,
+`context_penalty`, and `safety_penalty`, in addition to all raw and weighted
+components. This preserves the distinction between an inefficient successful
+trajectory and an unsafe or unsuccessful trajectory.
 
 ## 4. Files
 
@@ -128,14 +143,18 @@ test-seed 25101 matched episode also passed.
 | Executed path length | 5.540 m | 5.469 m |
 | Social violation integral | 0.283 s | 0.925 s |
 | Smoothness measure | 14.789 | 28.768 |
-| Shared navigation cost | 25.357 | 54.611 |
+| Trajectory-efficiency subtotal | 38.407 | 60.334 |
+| Context penalty | 0.283 | 0.925 |
+| Safety penalty | 0.000 | 0.000 |
+| Shared trajectory-efficiency cost | 38.690 | 61.258 |
 
-`Delta_J = J_DRL - J_Reference = -29.254`; therefore this episode is classified
+The stored trajectories rescored under the trajectory-efficiency objective give
+`Delta_J = J_DRL - J_Reference = -22.568`; therefore this episode is classified
 as **not inefficient relative to this Reference**. Both methods succeeded. This
 does not establish policy optimality: the Reference replanned 32 times, returned
 infeasible for 11 calls while pedestrians occupied constrained local regions,
-and stopped until a later feasible replan. Its longer execution and larger
-social/smoothness costs explain the negative Delta J.
+and stopped until a later feasible replan. Its much longer execution time
+explains most of the negative Delta J even though its path is 0.071 m shorter.
 
 Matched initialization errors were exactly zero for robot position, robot
 velocity, pedestrian positions, and pedestrian velocities. The run used 12

@@ -70,7 +70,7 @@ uv pip install --python .venv/bin/python -e '.[dev,rl,simulation]'
 .venv/bin/pytest -q
 ```
 
-The prepared release passed all 63 host-side tests. GPU and simulator acceptance
+The prepared release passed all 94 host-side tests. GPU and simulator acceptance
 still require a real Isaac Sim host.
 
 Most launchers default to `/home/engineer/IsaacLab`. On another machine, use
@@ -242,12 +242,13 @@ initial DRL training, and freeze the policy during counterfactual experiments.
 
 ## 11. Known implementation gaps
 
-The repository implements a working simulator-to-Recurrent-PPO path, but the
-final research system is not complete. In particular, the Mask-Aware ConvGRU,
-GRU interaction-attention intention model, full-information reference planner,
-spatial-temporal failure localization, and counterfactual intervention workflow
-are not established as completed components. Empty package boundaries must not
-be mistaken for implementations.
+The repository implements a working simulator-to-Recurrent-PPO path, the
+Office time-expanded reference planner, and the Office frozen-policy
+counterfactual workflow. The final research system is still incomplete: the
+required Mask-Aware ConvGRU and GRU interaction-attention intention model are
+not yet implemented, and the redesigned Case 1-2/Case 2 physical failure run
+has not yet been accepted. Office-only Stage 7 code must not be presented as a
+validated Hospital or Warehouse result.
 
 Stage 4 and Stage 5 reports remain marked in progress. Do not claim stage
 completion until their own acceptance tests and required experiments pass.

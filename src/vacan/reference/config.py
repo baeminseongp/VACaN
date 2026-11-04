@@ -22,6 +22,9 @@ def load_stage6_config(path: Path) -> dict[str, Any]:
     if bool(reference.get("uses_actual_future_trajectory", True)):
         raise ValueError(f"{path}: primary reference must not use oracle future trajectories")
     cost = data.get("shared_cost", {})
+    if cost.get("objective", "composite_navigation") not in {
+            "composite_navigation", "trajectory_efficiency"}:
+        raise ValueError(f"{path}: unsupported shared cost objective")
     required_weights = {"time", "length", "collision", "social", "smoothness",
                         "terminal_failure"}
     if set(cost.get("weights", {})) != required_weights:
