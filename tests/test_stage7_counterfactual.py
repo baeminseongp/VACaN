@@ -69,6 +69,15 @@ def test_stage7_office_config_has_exactly_two_factors_and_frozen_policy():
     assert {"case_1_1", "case_1_2", "case_2", "case_3"} <= set(value["case_studies"])
     assert value["case_studies"]["case_3"]["normal_branch"] == "original"
     assert value["case_studies"]["case_3"]["failing_branch"] == "full_information"
+    assert value["pedestrian_count"] == 18
+    case2 = value["case_studies"]["case_2"]
+    assert case2["initial_anchor_age_s"] == 240.0
+    assert case2["minimum_freshness_mediated_l2"] == 0.25
+    false_negative = next(
+        item for item in value["parsed_interventions"]
+        if item.intervention_id == "added_cctv_false_negative_direct_route"
+    )
+    assert false_negative.value == 0.0
 
 
 def test_stuck_and_oscillation_are_absent_in_progress_and_detected_in_place():
@@ -284,6 +293,37 @@ def test_incorrect_intention_without_freshness_does_not_reset_anchor():
     assert costmap.anchor_timestamp[2][2] == 4.0
     assert costmap.freshness[2][2] == 0.5
     assert costmap.last_update_type[2][2] == "intention_no_freshness_reset"
+
+
+def test_shared_stale_anchor_initialization_preserves_decay_rule():
+    costmap = DynamicCostmap(config(), 1)
+    costmap.tick(0.0, robot(), [])
+    costmap.anchor_cost[2][2] = 5.0
+    costmap.cctv_mean = 0.0
+    changes = costmap.initialize_stale_anchors([(2, 2)], now=0.0, age_s=240.0)
+    assert costmap.anchor_timestamp[2][2] == -240.0
+    assert costmap.freshness[2][2] == pytest.approx(0.2)
+    assert costmap.current_cost[2][2] == pytest.approx(1.0)
+    assert changes[0]["resulting_freshness"] == pytest.approx(0.2)
+    assert costmap.last_update_type[2][2] == "case_study_initial_stale_anchor"
+
+
+@pytest.mark.parametrize(
+    "kind,expected_reset",
+    [("scheduled_destination", True),
+     ("scheduled_destination_no_freshness", False)],
+)
+def test_scheduled_intention_event_has_explicit_anchor_semantics(kind, expected_reset):
+    geometry = GridGeometry((0, 0), (4, 4), 1)
+    item = spec(
+        "scheduled", "intention", kind, destination=(3, 3), event_id="event-1"
+    )
+    manager = InterventionManager([item], geometry, {(0, 0)})
+    events, logs = manager.modify_intentions(0.0, [], [], [person()])
+    assert events[0]["destination_grid"] == [3, 3]
+    assert events[0]["anchor_reset"] is expected_reset
+    assert logs[0]["anchor_reset"] is expected_reset
+    assert manager.modify_intentions(0.0, [], [], [person()]) == ([], [])
 
 
 def test_intention_replacement_missing_and_spurious_are_event_aware():

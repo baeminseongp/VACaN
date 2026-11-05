@@ -58,6 +58,8 @@ Stage 0 runtime smoke
   -> Stage 3 congestion/intention/freshness costmaps
   -> Stage 4 static map + policy observation/action/reward contracts
   -> Stage 5 Recurrent PPO training and held-out evaluation
+  -> Stage 6 full-information auxiliary reference
+  -> Stage 7 frozen-policy counterfactual analysis
 ```
 
 Do not continue to the next stage when the current stage validator fails. The
@@ -302,52 +304,51 @@ physical smoke training only after all Stage 4 maps validate:
 See `docs/stage-5-report.md`. Stage 5 is not complete until the physical smoke,
 checkpoint reload, resume, and held-out evaluations pass.
 
-## Stage 6 Office reference evaluation
+## Stage 6 Office reference evaluation (verified; overall Stage 6 in progress)
 
-Stage 6 freezes the selected Office policy and compares its physically executed
-trajectory with a time-expanded full-information reference planner using one
-shared navigation cost. The reference planner is an auxiliary efficiency
-comparator and is not claimed to be globally optimal.
+The Office-only Stage 6 pipeline provides a time-expanded dynamic reference
+planner, shared DRL/reference navigation cost, Delta-J classification, matched
+dataset export, and debug figures. It freezes the selected Office policy and
+does not retrain it. The held-out seed 15101 physical matched episode and its
+same-seed reproducibility repeat pass with the archived 12-pedestrian
+configuration. The current configuration requests 18 pedestrians for the
+strengthened Stage 7 auxiliary reference:
 
 ```bash
 .venv/bin/python scripts/run_stage6_office.py \
-  --seed 15101 --gpu 1 --headless
+  --seed 15101 --output artifacts/stage6/office-strengthened \
+  --gpu 1 --headless
 ```
 
-See `docs/stage-6-report.md`.
+The physical runner also records actor/critic recurrent state, Gaussian action
+mean/standard deviation, selected-action log probability, and critic value for
+later failure analysis. Requested policy actions and acceleration-limited
+physically applied commands are logged separately. The full repository suite
+currently passes 97 tests.
 
-## Stage 7 Office frozen-policy comparison
+See `docs/stage-6-report.md`. Stage 6 remains incomplete until physical matched
+evaluation passes in Office and later in Hospital and Warehouse.
 
-Stage 7 compares Actual, Full-information, Congestion-error, Intention-error,
-and Combined-error inputs using one frozen Office Recurrent PPO policy. Its
-case-study branches cover missing CCTV coverage, matched-layout added-CCTV
-false-high sensing, a three-branch intention/freshness mediation ablation, and
-normal DRL versus stuck/oscillating behavior from the same frozen policy. Exact
-installed CCTV remains the base assumption; restored coverage and corrupted
-added-CCTV sensing are explicitly labeled counterfactual controls. The Stage 6
-time-expanded A* trajectory is an auxiliary comparator, not a globally optimal
-baseline.
+## Stage 7 Office counterfactual analysis (redesigned; physical rerun pending)
 
-The repository contains the selected policy, Office occupancy map, and minimum
-matched Stage 6 records required for host decision replay:
+The Office Stage 7 pipeline compares Actual, Full-information,
+Congestion-error, Intention-error, and Combined-error inputs using one frozen
+Recurrent PPO policy. It also includes paired branches for a missing-CCTV-
+coverage crowd encounter, explicit counterfactual CCTV corruption,
+intention-induced freshness error under partial coverage, and Full-information
+DRL versus the Stage 6 time-expanded A* reference. Exact CCTV remains the base
+research assumption; restored coverage and corrupted sensing are isolated
+counterfactual controls. The strengthened design uses 18 pedestrians, a
+false-negative CCTV corruption, and a shared 240-second stale-map initial
+condition for the intention/freshness mediation. Its host tests pass; matched
+Stage 6 and closed-loop Stage 7 simulation runs remain pending.
 
-```bash
-.venv/bin/python scripts/analyze_stage7_office_decisions.py \
-  --output artifacts/stage7/office/decision
-```
+Run the population-matched Stage 6 reference first, then pass its printed run
+directory to Stage 7 with `--stage6-artifact`. See the report for exact
+commands.
 
-It also contains every retained Stage 7 Office run under
-`artifacts/stage7/`. These include intermediate, superseded experiment designs;
-read `artifacts/stage7/README.md` before treating a run as scientific evidence.
+See `docs/stage-7-report.md`. Hospital/Warehouse Stage 7 and Stage 8 have not
+been started.
 
-The full closed-loop Isaac Sim rerun additionally requires Isaac Sim 5.1,
-Isaac Lab 2.3.2, Pegasus 5.1, and access to the official NVIDIA assets:
-
-```bash
-.venv/bin/python scripts/run_stage7_office.py \
-  --seed 15101 --gpu 1 --headless
-```
-
-See `docs/stage-7-report.md`. The latest redesigned closed-loop run completed,
-but Case 1-2 and Case 2 produced negative cost deltas; those outcomes are
-preserved rather than relabeled as failures. Stage 8 has not started.
+The selected frozen Office policy and retained Stage 7 Office artifacts are
+versioned as ordinary Git files. No separate Git LFS download is required.

@@ -74,7 +74,7 @@ class PhysicalAdapter:
 
 
 def _resolve_phase(stage2: dict, stage2_path: Path, stage3: dict, training: dict,
-                   output: Path) -> tuple[dict, int]:
+                   output: Path, target_count: int) -> tuple[dict, int]:
     from vacan.rl.curriculum import resolve_pedestrian_population
 
     phase = next(p for p in training["curriculum"]["phases"]
@@ -83,9 +83,10 @@ def _resolve_phase(stage2: dict, stage2_path: Path, stage3: dict, training: dict
     source_routes = (stage2_path.parent / stage2["pedestrian_routes"]).resolve()
     stage1 = yaml.safe_load(source_stage1.read_text(encoding="utf-8"))
     routes = json.loads(source_routes.read_text(encoding="utf-8"))
-    count = int(phase["pedestrian_count"])
+    count = int(target_count)
     stage1, routes = resolve_pedestrian_population(stage1, routes, count)
-    stage1_path, routes_path = output / "resolved-stage1.yaml", output / "resolved-routes.json"
+    stage1_path = (output / "resolved-stage1.yaml").resolve()
+    routes_path = (output / "resolved-routes.json").resolve()
     stage1_path.write_text(yaml.safe_dump(stage1, sort_keys=False), encoding="utf-8")
     routes_path.write_text(json.dumps(routes, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     stage2["stage1_config"], stage2["pedestrian_routes"] = str(stage1_path), str(routes_path)
@@ -152,13 +153,17 @@ def run() -> dict:
     config = load_stage6_config(ARGS.stage6_config.resolve())
     if config["scenario"] != "office":
         raise ValueError("Office-only Stage 6 integration received another scenario")
+    ARGS.output = ARGS.output.resolve()
     ARGS.output.mkdir(parents=True, exist_ok=True)
     stage2_path = Path(config["resolved_stage2_config"])
     stage2 = load_stage2_config(stage2_path)
     stage4 = load_stage4_config(Path(config["resolved_stage4_config"]))
     training = load_stage5_config(Path(config["resolved_stage5_config"]))
     stage3 = load_stage3_config(Path(stage4["resolved_stage3_config"]))
-    stage3, pedestrian_count = _resolve_phase(stage2, stage2_path, stage3, training, ARGS.output)
+    stage3, pedestrian_count = _resolve_phase(
+        stage2, stage2_path, stage3, training, ARGS.output,
+        int(config["evaluation"]["pedestrian_count"]),
+    )
     checkpoint = Path(config["resolved_policy_checkpoint"])
     checkpoint_metadata = validate_checkpoint_scenario(checkpoint, "office")
     stage2["collision_probe"] = {"enabled": False}

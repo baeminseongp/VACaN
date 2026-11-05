@@ -46,6 +46,7 @@ def test_stage6_config_freezes_office_policy_and_no_oracle_future():
     }
     assert config["reference"]["uses_ground_truth_current_state"] is True
     assert config["reference"]["uses_actual_future_trajectory"] is False
+    assert config["evaluation"]["pedestrian_count"] == 18
     assert config["evaluation"]["validation_seeds"] == [15101]
     assert config["evaluation"]["test_seeds"] == [25101]
 

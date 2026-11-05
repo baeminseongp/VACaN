@@ -32,6 +32,8 @@ def load_stage6_config(path: Path) -> dict[str, Any]:
     if float(data.get("comparison", {}).get("inefficiency_tolerance", -1)) < 0:
         raise ValueError(f"{path}: invalid inefficiency tolerance")
     evaluation = data.get("evaluation", {})
+    if int(evaluation.get("pedestrian_count", 0)) <= 0:
+        raise ValueError(f"{path}: evaluation.pedestrian_count must be positive")
     for split in ("validation_seeds", "test_seeds"):
         if not isinstance(evaluation.get(split), list) or not evaluation[split]:
             raise ValueError(f"{path}: evaluation.{split} is required")

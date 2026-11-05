@@ -38,7 +38,7 @@ def main() -> None:
     checkpoint = Path(config["resolved_policy_checkpoint"])
     validate_checkpoint_scenario(checkpoint, "office")
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    run_dir = args.output / f"matched-seed{args.seed}-{stamp}"
+    run_dir = args.output.resolve() / f"matched-seed{args.seed}-{stamp}"
     if run_dir.exists() and not args.dry_run:
         raise SystemExit(f"refusing to overwrite existing run: {run_dir}")
     command = [

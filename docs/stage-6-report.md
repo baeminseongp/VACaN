@@ -7,6 +7,19 @@ failure dataset, and debug visualization pipeline is implemented and verified.
 Hospital and Warehouse remain pending until their environment-specific Stage 5
 policies are frozen.
 
+The verified artifacts described below used 12 pedestrians. On 2026-11-05,
+`configs/stage6/office.yaml` was changed to 18 pedestrians solely to generate a
+population-matched auxiliary reference for the strengthened Stage 7 case
+studies. That new 18-pedestrian Stage 6 run is pending and does not replace the
+verified 12-pedestrian evidence in this report.
+
+The first strengthened run attempt on 2026-11-05 failed before environment
+construction because a relative `--output` path was written into the resolved
+Stage 2 configuration and then incorrectly resolved below `configs/stage2/`.
+Both Stage 6 and Stage 7 launchers now canonicalize run directories and
+resolved Stage 1/route paths to absolute paths. The accompanying ROS 2 bridge
+startup warning was unrelated and is not required by this pipeline.
+
 ## 1. Implemented components
 
 - Heading-aware Time-Expanded A* over `(time,row,column,heading)` states.
@@ -215,14 +228,12 @@ were unavailable. Its exception is retained under
 `matched-seed15101-20261103T152321Z`. Re-running outside that sandbox with the
 same repository command succeeded; no simulator fallback was used.
 
-Reproduction command:
+Commands for the strengthened 18-pedestrian Stage 7 reference:
 
 ```bash
 .venv/bin/python scripts/run_stage6_office.py \
-  --seed 15101 --gpu 1 --headless
-
-.venv/bin/python scripts/run_stage6_office.py \
-  --seed 25101 --gpu 1 --headless
+  --seed 15101 --output artifacts/stage6/office-strengthened \
+  --gpu 1 --headless
 
 .venv/bin/python scripts/summarize_stage6.py artifacts/stage6/office
 
@@ -252,8 +263,8 @@ Reference trajectory JSONL, separate Ground Truth JSONL, planning history,
   intervention analysis.
 
 Stage 6 can be marked complete only after physical matched evaluations and
-dataset validation pass for Office, Hospital, and Warehouse. Stage 7 has not
-been started.
+dataset validation pass for Office, Hospital, and Warehouse. Office Stage 7 is
+in progress; its strengthened 18-pedestrian run remains pending.
 
 ## 8. Requirements for completing Stage 6
 

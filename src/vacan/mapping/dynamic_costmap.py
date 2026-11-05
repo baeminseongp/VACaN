@@ -204,6 +204,44 @@ class DynamicCostmap:
                     + (1.0 - freshness) * self.cctv_mean
                 )
 
+    def initialize_stale_anchors(
+        self, cells: list[Cell] | tuple[Cell, ...], *, now: float, age_s: float
+    ) -> list[dict[str, Any]]:
+        """Apply a shared, timestamp-consistent stale-map initial condition.
+
+        This is used only by matched counterfactual branches. It changes no
+        crowd value, Ground Truth, or decay constant; it moves the existing
+        anchor timestamps into the past and recomputes the standard linear
+        300-second decay at the current simulation time.
+        """
+        if not self.initialized:
+            raise RuntimeError("costmap must be initialized before anchors are aged")
+        if not 0.0 <= float(age_s) <= self.decay_time:
+            raise ValueError("initial anchor age must be within the decay interval")
+        changes: list[dict[str, Any]] = []
+        for raw_cell in cells:
+            row, column = map(int, raw_cell)
+            cell = (row, column)
+            if not (0 <= row < self.rows and 0 <= column < self.columns):
+                raise ValueError(f"initial anchor cell {cell} is outside the grid")
+            if cell in self.cctv_cells:
+                raise ValueError(f"CCTV cell {cell} cannot receive a stale anchor")
+            previous_timestamp = float(self.anchor_timestamp[row][column])
+            self.anchor_timestamp[row][column] = float(now) - float(age_s)
+            self.last_update_type[row][column] = "case_study_initial_stale_anchor"
+            changes.append({
+                "grid_cell": [row, column],
+                "previous_anchor_timestamp_s": previous_timestamp,
+                "initialized_anchor_timestamp_s": self.anchor_timestamp[row][column],
+                "initial_anchor_age_s": float(age_s),
+            })
+        self._decay(float(now))
+        for change in changes:
+            row, column = change["grid_cell"]
+            change["resulting_freshness"] = float(self.freshness[row][column])
+            change["resulting_cost"] = float(self.current_cost[row][column])
+        return changes
+
     def _camera_pose(self, robot: dict[str, Any]) -> tuple[float, float, float]:
         fov = self.config["robot_observation"]
         x, y = map(float, robot["position_xyz_m"][:2])

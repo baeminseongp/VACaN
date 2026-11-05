@@ -8,14 +8,12 @@ intention-induced freshness error under partial coverage, and a
 normal-DRL comparison against stuck/oscillating behavior from the same frozen
 policy. The Stage 6 reference planner remains an auxiliary comparator.
 
-Stage 7 is **in progress**. Host-side decision replay and unit tests pass, and
-the latest redesigned closed-loop Isaac Sim run
-(`run-seed15101-20261104T122140Z`) completed with launcher status `pass` and
-no-op trajectory equality. Case 1-1 and Case 3 show the intended inefficiency
-or failure direction. Case 1-2 and Case 2 diverge but have negative cost deltas,
-so they are retained as negative results and still require redesign or a
-predeclared broader seed evaluation. Hospital and Warehouse are outside the
-currently authorized Stage 7 scope, and Stage 8 has not started.
+Stage 7 is **in progress**. The strengthened design passes 97 host tests, but
+its 18-pedestrian Stage 6 reference and closed-loop Stage 7 episode have not
+yet been generated. Earlier 12-pedestrian artifacts remain provenance only.
+Hospital and
+Warehouse are outside the currently authorized Stage 7 scope, and Stage 8 has
+not started.
 
 ## 1. Experimental question
 
@@ -35,8 +33,8 @@ The case-study-specific paired branches are:
 | Case | Correct/reference condition | Comparison condition |
 |---|---|---|
 | 1-1. Missing CCTV coverage | exact counterfactual coverage in the six-cell central non-CCTV region | Actual partial coverage |
-| 1-2. CCTV sensing error | exact counts from the same two added direct-route CCTV cells | false-high counts from those same added CCTV cells |
-| 2. Intention/freshness error | correct intention | wrong intention without anchor reset, then wrong intention with erroneous freshness reset |
+| 1-2. CCTV sensing error | exact counts from the same two added direct-route CCTV cells | false-negative zero counts from occupied cells |
+| 2. Intention/freshness error | scheduled correct destinations on a shared 240 s stale map | scheduled wrong destinations without anchor reset, then the same wrong destinations with reset |
 | 3. Stuck/oscillation policy failure | successful Actual DRL | failing Full-information branch of the same frozen DRL |
 
 This design isolates information-condition changes from learning. It does not
@@ -89,9 +87,11 @@ The controlled Office errors are:
   explicitly labeled multi-person stress intervention used to make the
   intention/freshness effect observable with the frozen policy.
 - Combined error: apply both changes to the same full-information state.
-- CCTV case-study error: both paired branches add exact coverage over the same
-  central region; the error branch alone exposes count 6 in direct-route cells
-  `[2,3]` and `[3,3]` from 0–20 s.
+- CCTV case-study error: both paired branches add coverage over the same
+  central region; the error branch reports false-negative zero counts in
+  direct-route cells `[2,3]` and `[3,3]` from 0–20 s. A run is eligible for
+  interpretation only if at least one corrupted sample has nonzero Ground
+  Truth occupancy.
 - Missing-coverage control: expose exact counts in the otherwise non-CCTV
   central corridor (`[2,2]`, `[2,3]`, `[3,2]`, `[3,3]`, `[4,2]`, `[4,3]`);
   the comparison branch retains the original sensing gap.
@@ -104,18 +104,26 @@ the two direct-route counts. It is explicitly labeled
 privileged log and are never mutated. This is a controlled robustness study,
 not a claim that base VACaN CCTV observations are noisy.
 
-Case 1-1 retains the original CCTV layout. `coverage_restored` is a privileged
+Case 1-1 uses 18 deterministic pedestrians in every matched branch to increase
+the probability of a decision-relevant hidden crowd without changing FOV or
+camera range. It retains the original CCTV layout. `coverage_restored` is a privileged
 counterfactual control for the central non-CCTV region, not a change to Actual
 DRL. The exported metrics record the policy-visible estimate, exact crowd
 count, visibility, last update source, whether the robot is inside each target
 cell, and maximum crowd underestimation.
 
 Case 2 does not use full congestion. All three branches retain the same limited
-FOV. The direct-only ablation moves the three destination contributions but
-does not reset their cost anchors. The full error branch applies the same wrong
-destinations and also resets the wrong cell's anchor timestamp and freshness.
+FOV and begin with the same affected-cell anchors aged by 240 s under the
+unchanged 300 s linear decay. At 4 s, scheduled correct events target `[4,3]`
+for `office_04`/`office_10` and `[1,2]` for `office_11`. The direct-only
+ablation moves all three contributions to nonvisible central-left cell `[3,2]`
+without resetting its
+anchor. The full error branch applies the same wrong destinations and resets
+the wrong cell's anchor timestamp and freshness.
 Thus `direct-only - correct` measures the intention contribution and
-`full-error - direct-only` measures the freshness-mediated addition.
+`full-error - direct-only` measures the freshness-mediated addition. The
+freshness treatment must reach an L2 difference of at least 0.25 before a
+causal failure interpretation is eligible.
 Ground-Truth validity is computed offline as
 `1-min(abs(N_gt(t)-N_gt(anchor_t))/crowd_clip,1)` and is never given to the
 policy.
@@ -212,25 +220,40 @@ Repository packaging added for reproducibility:
 - `checkpoints/README.md`
 - `checkpoints/stage5/office/{recurrent_ppo.zip,metadata.yaml}`
 
-The curated checkpoint, minimum reproduction inputs, and complete retained
-Office Stage 7 archive are versioned as ordinary Git files. Other generated
+The curated checkpoint, minimum reproduction inputs, and retained Office
+Stage 7 archive are versioned as ordinary Git files. Other generated
 experiment outputs remain ignored.
 
 ## 7. Commands and current validation
 
-Host validation:
+Host validation performed on 2026-11-04:
 
 ```bash
 .venv/bin/python -m pytest -q
-.venv/bin/python scripts/analyze_stage7_office_decisions.py \
-  --output /tmp/vacan-stage7-full-decision
-git status --short
+.venv/bin/python -m py_compile \
+  src/vacan/counterfactual/intervention.py \
+  src/vacan/counterfactual/config.py \
+  src/vacan/mapping/dynamic_costmap.py \
+  scripts/isaacsim/run_stage7_office.py
+# 97 passed
 ```
 
-Required closed-loop rerun for the redesigned comparison:
+Generate the population-matched Stage 6 auxiliary reference first:
 
 ```bash
+.venv/bin/python scripts/run_stage6_office.py \
+  --seed 15101 --output artifacts/stage6/office-strengthened \
+  --gpu 1 --headless
+```
+
+Then use the printed Stage 6 run directory for the strengthened Stage 7 run:
+
+```bash
+STAGE6_RUN="$(find artifacts/stage6/office-strengthened -maxdepth 1 \
+  -type d -name 'matched-seed15101-*' | sort | tail -1)"
+test -n "$STAGE6_RUN"
 .venv/bin/python scripts/run_stage7_office.py \
+  --stage6-artifact "$STAGE6_RUN" \
   --seed 15101 --gpu 1 --headless
 ```
 
@@ -244,21 +267,20 @@ superseded 2026-11-03 correction experiment:
 
 ## 8. Generated assets and artifacts
 
-The host replay writes experiment records, compressed policy
+The host replay currently writes eight experiment records, compressed policy
 representations, provenance logs, and decision figures to the requested output
-directory. A physical run additionally writes per-branch policy and
+directory. A physical run will additionally write per-branch policy and
 privileged trajectories, intervention JSONL, episode costs, trajectory arrays,
 spatial-temporal query indexes, and figures.
 
-All six retained timestamped runs and the standalone host decision replay are
-archived in the release repository. The earlier runs are superseded experiment
-designs and must not be reported as evidence for the latest case-study design.
-See `artifacts/stage7/README.md` for provenance and interpretation guidance.
+All existing Stage 7 artifacts use the superseded 12-pedestrian designs. They
+must not be reported as evidence for the strengthened experiment until a new
+18-pedestrian run has completed.
 
 ## 9. Known limitations and acceptance status
 
-- Only one Office seed, start/goal, and resolved crowd realization are
-  configured for the first redesigned run.
+- Only one Office seed and start/goal pair are configured for the first
+  strengthened run; broader predeclared held-out evaluation remains required.
 - The controlled errors occur at one time and fixed cells; broader error
   magnitudes and timings are not yet evaluated.
 - Full-information intention is the controller's declared current destination,
@@ -274,6 +296,6 @@ The code marks a case as a candidate only when the erroneous/comparison branch
 has higher shared cost and its path or outcome diverges. Otherwise it preserves
 the result as negative; path differences are never fabricated.
 
-The latest physical run and structural checks pass, but Stage 7 must not be
-marked complete while Case 1-2 and Case 2 fail to demonstrate the predeclared
-positive inefficiency direction on the evaluated seed.
+Stage 7 must not be marked complete until the redesigned physical run passes,
+the no-op equality check passes, all configured branches are evaluated with the
+shared cost, and the report is updated with actual closed-loop results.

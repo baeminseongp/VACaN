@@ -40,6 +40,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/stage7/office.yaml")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts/stage7/office/decision")
+    parser.add_argument("--stage6-artifact", type=Path)
     args = parser.parse_args()
     config = load_stage7_config(args.config.resolve())
     stage6 = load_stage6_config(Path(config["resolved_stage6_config"]))
@@ -58,7 +59,18 @@ def main() -> None:
             limits.max_angular_rad_s,
         ), dynamic_geometry=config["geometry"],
     )
-    artifact = Path(config["resolved_stage6_artifact"])
+    artifact = (args.stage6_artifact.resolve() if args.stage6_artifact
+                else Path(config["resolved_stage6_artifact"]))
+    reference_metadata = json.loads(
+        (artifact / "metadata.json").read_text(encoding="utf-8")
+    )
+    if int(reference_metadata.get("pedestrian_count", -1)) != int(
+            config["pedestrian_count"]):
+        raise ValueError(
+            "Stage 7 decision replay requires a Stage 6 artifact with "
+            f"pedestrian_count={config['pedestrian_count']}; got "
+            f"{reference_metadata.get('pedestrian_count')}"
+        )
     trajectories = _records(artifact / "drl-trajectory.jsonl")
     truths = _records(artifact / "ground-truth-drl.jsonl")
     model = RecurrentPPO.load(config["resolved_policy_checkpoint"], device="cpu")

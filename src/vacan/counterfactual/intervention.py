@@ -86,6 +86,7 @@ def parse_intervention(raw: dict[str, Any], geometry: GridGeometry) -> Intervent
                        "full_information", "coverage_restoration", "coverage_corruption",
                        "cctv_corruption", "no_op"},
         "intention": {"incorrect_destination", "missing", "spurious",
+                      "scheduled_destination", "scheduled_destination_no_freshness",
                       "incorrect_destination_no_freshness", "ground_truth_correction",
                       "full_information", "no_op"},
     }
@@ -157,11 +158,18 @@ class InterventionManager:
                     "incorrect_destination_no_freshness", "ground_truth_correction"} \
                     and spec.factor == "intention" and spec.destination_grid is None:
                 raise ValueError(f"{spec.intervention_id}: destination_grid is required")
-            if spec.intervention_type == "spurious" and (not spec.pedestrian_id or not spec.event_id):
-                raise ValueError("spurious intention requires identified pedestrian_id and event_id")
+            if spec.intervention_type in {
+                    "spurious", "scheduled_destination",
+                    "scheduled_destination_no_freshness"} \
+                    and (not spec.pedestrian_id or not spec.event_id):
+                raise ValueError(
+                    f"{spec.intervention_type} intention requires identified "
+                    "pedestrian_id and event_id"
+                )
             if spec.factor == "intention" and spec.intervention_type in {
                     "incorrect_destination", "incorrect_destination_no_freshness",
-                    "ground_truth_correction", "spurious"}:
+                    "ground_truth_correction", "spurious", "scheduled_destination",
+                    "scheduled_destination_no_freshness"}:
                 if spec.destination_grid is None:
                     raise ValueError(f"{spec.intervention_id}: intention destination is required")
                 row, column = spec.destination_grid
@@ -339,7 +347,9 @@ class InterventionManager:
                 continue
             matched = [event for event in modified_events
                        if spec.pedestrian_id is None or event["pedestrian_id"] == spec.pedestrian_id]
-            if spec.intervention_type == "spurious":
+            if spec.intervention_type in {
+                    "spurious", "scheduled_destination",
+                    "scheduled_destination_no_freshness"}:
                 once_key = f"{spec.intervention_id}:{spec.event_id}"
                 if once_key in self._applied_once:
                     continue
@@ -347,7 +357,11 @@ class InterventionManager:
                 event = {
                     "event_id": str(spec.event_id), "pedestrian_id": str(spec.pedestrian_id),
                     "destination_grid": list(spec.destination_grid or spec.cells[0]),
-                    "contribution": 1, "source": "counterfactual_spurious",
+                    "contribution": 1,
+                    "source": f"counterfactual_{spec.intervention_type}",
+                    "anchor_reset": (
+                        spec.intervention_type != "scheduled_destination_no_freshness"
+                    ),
                 }
                 modified_events.append(event)
                 matched = [event]

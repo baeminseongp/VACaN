@@ -35,6 +35,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/stage7/office.yaml")
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts/stage7/office")
+    parser.add_argument("--stage6-artifact", type=Path)
     parser.add_argument("--seed", type=int, default=15101)
     parser.add_argument("--gpu", type=int, choices=(0, 1), default=1)
     parser.add_argument("--headless", action="store_true")
@@ -48,15 +49,25 @@ def main() -> None:
         raise SystemExit("choose at most one of --decision-only and --episode-only")
     config = load_stage7_config(args.config.resolve())
     stage6 = load_stage6_config(Path(config["resolved_stage6_config"]))
-    reference_metadata_path = Path(config["resolved_stage6_artifact"]) / "metadata.json"
+    reference_artifact = (args.stage6_artifact.resolve() if args.stage6_artifact
+                          else Path(config["resolved_stage6_artifact"]))
+    reference_metadata_path = reference_artifact / "metadata.json"
     reference_metadata = json.loads(reference_metadata_path.read_text(encoding="utf-8"))
     if int(reference_metadata["seed"]) != args.seed:
         raise SystemExit(
             f"Stage 7 seed {args.seed} does not match the configured Stage 6 reference "
             f"seed {reference_metadata['seed']}; generate/select a matched Stage 6 artifact"
         )
+    if int(reference_metadata.get("pedestrian_count", -1)) != int(
+            config["pedestrian_count"]):
+        raise SystemExit(
+            "Stage 7 requires a population-matched Stage 6 artifact: "
+            f"expected {config['pedestrian_count']} pedestrians, got "
+            f"{reference_metadata.get('pedestrian_count')}. Regenerate Stage 6 "
+            "and pass it with --stage6-artifact."
+        )
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    run_dir = args.output / f"run-seed{args.seed}-{stamp}"
+    run_dir = args.output.resolve() / f"run-seed{args.seed}-{stamp}"
     environment = os.environ.copy()
     environment.update({
         "PYTHONEXE": str(ROOT / ".venv/bin/python"),
@@ -71,12 +82,14 @@ def main() -> None:
     decision_command = [str(ROOT / ".venv/bin/python"),
                         str(ROOT / "scripts/analyze_stage7_office_decisions.py"),
                         "--config", str(args.config.resolve()), "--output", str(run_dir / "decision")]
+    decision_command.extend(["--stage6-artifact", str(reference_artifact)])
     episode_command = [str(args.isaacsim_root / "python.sh"),
                        str(ROOT / "scripts/isaacsim/run_stage7_office.py"),
                        "--stage7-config", str(args.config.resolve()),
                        "--config", stage6["resolved_stage2_config"],
                        "--output", str(run_dir / "episode"), "--seed", str(args.seed),
                        "--gpu", str(args.gpu)]
+    episode_command.extend(["--stage6-artifact", str(reference_artifact)])
     if args.headless:
         episode_command.append("--headless")
     commands = []

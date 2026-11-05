@@ -38,6 +38,7 @@ comparison:
   divergence_distance_m: 0.75
   angular_action_change_rad_s: 0.5
 evaluation:
+  pedestrian_count: 18
   validation_seeds: [15101]
   test_seeds: [25101]
   matched_episodes: 1

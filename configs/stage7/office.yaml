@@ -6,6 +6,7 @@ stage6_artifact: ../../reproduction/office/stage6/matched-seed15101
 policy_checkpoint: ../../checkpoints/stage5/office/recurrent_ppo.zip
 policy: {frozen: true, inference: deterministic}
 seed: 15101
+pedestrian_count: 18
 comparison_tolerance: 1.0e-6
 grid:
   origin_xy: [-12.0, -12.0]
@@ -32,13 +33,13 @@ interventions:
     end_time_s: 0.0
     scope: {cells: [[3, 3]]}
     delta: 3
-  - id: added_cctv_false_high_direct_route
+  - id: added_cctv_false_negative_direct_route
     factor: congestion
     type: coverage_corruption
     start_time_s: 0.0
     end_time_s: 20.0
     scope: {cells: [[2, 3], [3, 3]]}
-    value: 6
+    value: 0
     measurement_convention: counterfactual_added_cctv_corruption
   - id: restore_missing_cctv_coverage_central_corridor
     factor: congestion
@@ -89,6 +90,81 @@ interventions:
     end_time_s: 120.0
     pedestrian_id: office_11
     destination_grid: [3, 3]
+  # Case 2 uses a matched scheduled event at a decision-critical time. The
+  # correct and erroneous branches share a 240 s stale-map initial condition;
+  # only the erroneous freshness branch resets the wrong destination anchor.
+  - id: case2_correct_office_04
+    factor: intention
+    type: scheduled_destination
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_04
+    event_id: case2-correct-office-04
+    destination_grid: [4, 3]
+  - id: case2_correct_office_10
+    factor: intention
+    type: scheduled_destination
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_10
+    event_id: case2-correct-office-10
+    destination_grid: [4, 3]
+  - id: case2_correct_office_11
+    factor: intention
+    type: scheduled_destination
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_11
+    event_id: case2-correct-office-11
+    destination_grid: [1, 2]
+  - id: case2_wrong_direct_office_04
+    factor: intention
+    type: scheduled_destination_no_freshness
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_04
+    event_id: case2-wrong-direct-office-04
+    destination_grid: [3, 2]
+  - id: case2_wrong_direct_office_10
+    factor: intention
+    type: scheduled_destination_no_freshness
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_10
+    event_id: case2-wrong-direct-office-10
+    destination_grid: [3, 2]
+  - id: case2_wrong_direct_office_11
+    factor: intention
+    type: scheduled_destination_no_freshness
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_11
+    event_id: case2-wrong-direct-office-11
+    destination_grid: [3, 2]
+  - id: case2_wrong_fresh_office_04
+    factor: intention
+    type: scheduled_destination
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_04
+    event_id: case2-wrong-fresh-office-04
+    destination_grid: [3, 2]
+  - id: case2_wrong_fresh_office_10
+    factor: intention
+    type: scheduled_destination
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_10
+    event_id: case2-wrong-fresh-office-10
+    destination_grid: [3, 2]
+  - id: case2_wrong_fresh_office_11
+    factor: intention
+    type: scheduled_destination
+    start_time_s: 4.0
+    end_time_s: 4.4
+    pedestrian_id: office_11
+    event_id: case2-wrong-fresh-office-11
+    destination_grid: [3, 2]
   - id: no_op
     factor: congestion
     type: no_op
@@ -123,7 +199,7 @@ experiments:
   - id: cctv_congestion_error
     intervention_ids:
       - restore_missing_cctv_coverage_central_corridor
-      - added_cctv_false_high_direct_route
+      - added_cctv_false_negative_direct_route
     baseline_id: coverage_restored
     case_study_id: case_1_2_cctv_sensing_error
   - id: coverage_restored
@@ -131,25 +207,32 @@ experiments:
     baseline_id: original
     role: case_1_1_correct_coverage
   - id: correct_intention_partial
-    intervention_ids: [full_intention]
+    intervention_ids:
+      - case2_correct_office_04
+      - case2_correct_office_10
+      - case2_correct_office_11
     baseline_id: original
     role: case_2_correct_input
+    initial_anchor_age_s: 240.0
+    initial_anchor_cells: [[4, 3], [1, 2], [3, 2]]
   - id: intention_error_without_freshness
     intervention_ids:
-      - full_intention
-      - intention_direct_error_office_04
-      - intention_direct_error_office_10
-      - intention_direct_error_office_11
+      - case2_wrong_direct_office_04
+      - case2_wrong_direct_office_10
+      - case2_wrong_direct_office_11
     baseline_id: correct_intention_partial
     role: case_2_direct_intention_ablation
+    initial_anchor_age_s: 240.0
+    initial_anchor_cells: [[4, 3], [1, 2], [3, 2]]
   - id: intention_freshness_error
     intervention_ids:
-      - full_intention
-      - intention_injected_error_office_04
-      - intention_injected_error_office_10
-      - intention_injected_error_office_11
+      - case2_wrong_fresh_office_04
+      - case2_wrong_fresh_office_10
+      - case2_wrong_fresh_office_11
     baseline_id: correct_intention_partial
     case_study_id: case_2_intention_freshness_error
+    initial_anchor_age_s: 240.0
+    initial_anchor_cells: [[4, 3], [1, 2], [3, 2]]
   - {id: no_op, intervention_ids: [no_op], baseline_id: original}
 case_studies:
   trajectory_divergence_m: 0.75
@@ -160,15 +243,20 @@ case_studies:
     correct_branch: coverage_restored
     error_branch: original
     affected_cells: [[2, 2], [2, 3], [3, 2], [3, 3], [4, 2], [4, 3]]
+    minimum_peak_underestimation: 2.0
   case_1_2:
     correct_branch: coverage_restored
     error_branch: cctv_congestion_error
     affected_cells: [[2, 3], [3, 3]]
+    corruption_mode: false_negative
+    minimum_nonzero_ground_truth_samples: 1
   case_2:
     correct_branch: correct_intention_partial
     direct_only_branch: intention_error_without_freshness
     error_branch: intention_freshness_error
-    affected_cells: [[4, 3], [1, 2], [3, 3]]
+    affected_cells: [[4, 3], [1, 2], [3, 2]]
+    initial_anchor_age_s: 240.0
+    minimum_freshness_mediated_l2: 0.25
   case_3:
     normal_branch: original
     failing_branch: full_information

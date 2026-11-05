@@ -19,6 +19,8 @@ def load_stage7_config(path: Path) -> dict[str, Any]:
         raise ValueError("this Stage 7 implementation is intentionally Office-only")
     if data.get("policy", {}).get("frozen") is not True:
         raise ValueError("Stage 7 requires a frozen policy")
+    if int(data.get("pedestrian_count", 0)) <= 0:
+        raise ValueError("Stage 7 pedestrian_count must be positive")
     if "freshness" in {str(item.get("factor")) for item in data.get("interventions", [])}:
         raise ValueError("Freshness is not an independent Stage 7 intervention")
     base = path.resolve().parent
@@ -48,6 +50,25 @@ def load_stage7_config(path: Path) -> dict[str, Any]:
         baseline = str(experiment.get("baseline_id", "original"))
         if baseline not in available_branches or baseline == experiment["id"]:
             raise ValueError(f"{experiment['id']}: invalid baseline_id {baseline}")
+        age = experiment.get("initial_anchor_age_s")
+        cells = experiment.get("initial_anchor_cells")
+        if (age is None) != (cells is None):
+            raise ValueError(
+                f"{experiment['id']}: initial anchor age and cells must be configured together"
+            )
+        if age is not None:
+            if not 0.0 < float(age) <= 300.0:
+                raise ValueError(
+                    f"{experiment['id']}: initial anchor age must be in (0, 300]"
+                )
+            resolved_cells = [tuple(map(int, cell)) for cell in cells]
+            if not resolved_cells:
+                raise ValueError(f"{experiment['id']}: initial anchor cells cannot be empty")
+            for row, column in resolved_cells:
+                if not (0 <= row < geometry.shape[0] and 0 <= column < geometry.shape[1]):
+                    raise ValueError(
+                        f"{experiment['id']}: initial anchor cell {(row, column)} is outside grid"
+                    )
     cases = data.get("case_studies", {})
     required_cases = {"case_1_1", "case_1_2", "case_2", "case_3"}
     if set(cases) & required_cases != required_cases:
@@ -63,6 +84,27 @@ def load_stage7_config(path: Path) -> dict[str, Any]:
     }
     if not referenced <= available_branches:
         raise ValueError(f"case studies reference unknown branches {sorted(referenced - available_branches)}")
+    experiments_by_id = {item["id"]: item for item in experiments}
+    case2 = cases["case_2"]
+    case2_branches = [
+        experiments_by_id[case2[key]]
+        for key in ("correct_branch", "direct_only_branch", "error_branch")
+    ]
+    initial_states = {
+        (
+            float(item.get("initial_anchor_age_s", -1.0)),
+            tuple(tuple(map(int, cell)) for cell in item.get("initial_anchor_cells", [])),
+        )
+        for item in case2_branches
+    }
+    if len(initial_states) != 1:
+        raise ValueError("case_2 branches must share the same stale-anchor initial state")
+    configured_age, configured_cells = next(iter(initial_states))
+    if configured_age != float(case2.get("initial_anchor_age_s", -2.0)):
+        raise ValueError("case_2 initial anchor age does not match its branches")
+    if configured_cells != tuple(
+            tuple(map(int, cell)) for cell in case2.get("affected_cells", [])):
+        raise ValueError("case_2 initial anchor cells must equal affected_cells")
     behavior = cases["case_3"].get("behavior_detection", {})
     positive_behavior_fields = {
         "window_s", "stuck_max_displacement_m", "stuck_max_goal_progress_m",

@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--stage7-config", type=Path, required=True)
 parser.add_argument("--config", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--stage6-artifact", type=Path)
 parser.add_argument("--seed", type=int, required=True)
 parser.add_argument("--gpu", type=int, default=1)
 parser.add_argument("--headless", action="store_true")
@@ -71,15 +72,16 @@ class PhysicalAdapter:
 
 
 def _resolve_phase(stage2: dict, stage2_path: Path, stage3: dict, training: dict,
-                   output: Path) -> tuple[dict, int]:
+                   output: Path, target_count: int) -> tuple[dict, int]:
     from vacan.rl.curriculum import resolve_pedestrian_population
     phase = next(item for item in training["curriculum"]["phases"]
                  if item["name"] == "partial_coverage_noise")
     stage1 = yaml.safe_load((stage2_path.parent / stage2["stage1_config"]).resolve().read_text())
     routes = json.loads((stage2_path.parent / stage2["pedestrian_routes"]).resolve().read_text())
-    count = int(phase["pedestrian_count"])
+    count = int(target_count)
     stage1, routes = resolve_pedestrian_population(stage1, routes, count)
-    stage1_path, routes_path = output / "resolved-stage1.yaml", output / "resolved-routes.json"
+    stage1_path = (output / "resolved-stage1.yaml").resolve()
+    routes_path = (output / "resolved-routes.json").resolve()
     stage1_path.write_text(yaml.safe_dump(stage1, sort_keys=False), encoding="utf-8")
     routes_path.write_text(json.dumps(routes, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     stage2["stage1_config"], stage2["pedestrian_routes"] = str(stage1_path), str(routes_path)
@@ -144,21 +146,34 @@ def run() -> dict:
     started = time.perf_counter()
     cfg7 = load_stage7_config(ARGS.stage7_config.resolve())
     cfg6 = load_stage6_config(Path(cfg7["resolved_stage6_config"]))
+    reference_artifact = (ARGS.stage6_artifact.resolve() if ARGS.stage6_artifact
+                          else Path(cfg7["resolved_stage6_artifact"]))
     reference_metadata = json.loads(
-        (Path(cfg7["resolved_stage6_artifact"]) / "metadata.json").read_text(encoding="utf-8")
+        (reference_artifact / "metadata.json").read_text(encoding="utf-8")
     )
     if int(reference_metadata["seed"]) != ARGS.seed:
         raise ValueError(
             f"Stage 7 seed {ARGS.seed} does not match Stage 6 reference seed "
             f"{reference_metadata['seed']}"
         )
+    if int(reference_metadata.get("pedestrian_count", -1)) != int(
+            cfg7["pedestrian_count"]):
+        raise ValueError(
+            "Stage 7 requires a population-matched Stage 6 reference: "
+            f"expected {cfg7['pedestrian_count']} pedestrians, got "
+            f"{reference_metadata.get('pedestrian_count')}"
+        )
     stage2_path = Path(cfg6["resolved_stage2_config"])
     stage2 = load_stage2_config(stage2_path)
     stage4 = load_stage4_config(Path(cfg6["resolved_stage4_config"]))
     training = load_stage5_config(Path(cfg6["resolved_stage5_config"]))
     stage3 = load_stage3_config(Path(stage4["resolved_stage3_config"]))
+    ARGS.output = ARGS.output.resolve()
     ARGS.output.mkdir(parents=True, exist_ok=True)
-    stage3, pedestrian_count = _resolve_phase(stage2, stage2_path, stage3, training, ARGS.output)
+    stage3, pedestrian_count = _resolve_phase(
+        stage2, stage2_path, stage3, training, ARGS.output,
+        int(cfg7["pedestrian_count"]),
+    )
     stage2["collision_probe"] = {"enabled": False}
     stage2["episode"]["max_steps"] = round(
         float(stage4["episode"]["max_duration_s"]) / float(stage2["episode"]["physics_dt_s"]))
@@ -178,6 +193,8 @@ def run() -> dict:
     }}
     branch_records: dict[str, list[dict]] = {}
     branch_ground_truth: dict[str, list[dict]] = {}
+    branch_intervention_logs: dict[str, list[dict]] = {}
+    branch_initializations: dict[str, list[dict]] = {}
     branch_results = []
     original_reset = None
     original_trajectory = None
@@ -200,6 +217,21 @@ def run() -> dict:
         else:
             model.set_env(env)
         observation, _ = env.reset(seed=ARGS.seed)
+        initial_anchor_changes: list[dict] = []
+        if branch.get("initial_anchor_age_s") is not None:
+            if env.costmap is None:
+                raise RuntimeError("costmap was not initialized by reset")
+            physical_observation = physical.observe()
+            initialization_time = (
+                float(physical_observation["simulation_step"]) * env.physics_dt
+            )
+            initial_anchor_changes = env.costmap.initialize_stale_anchors(
+                [tuple(map(int, cell)) for cell in branch["initial_anchor_cells"]],
+                now=initialization_time,
+                age_s=float(branch["initial_anchor_age_s"]),
+            )
+            observation = env._policy_observation(physical_observation)
+        branch_initializations[branch["id"]] = initial_anchor_changes
         initial_robot = physical.observe()["robot"]
         initial_people = adapter.pedestrian_states()
         reset_state = {
@@ -266,6 +298,7 @@ def run() -> dict:
             {**item, **common} for item in manager.logs
         ]
         _write_jsonl(branch_dir / "intervention-events.jsonl", intervention_logs)
+        branch_intervention_logs[branch["id"]] = intervention_logs
         if original_trajectory is None:
             original_trajectory, original_cost = trajectory, cost
         delta_vs_actual = 0.0 if original_cost is None else float(cost.total - original_cost.total)
@@ -274,6 +307,7 @@ def run() -> dict:
             "success": success, "steps": len(trajectory) - 1, "reset_max_error": reset_error,
             "cost": cost.to_dict(), "delta_j_vs_actual": delta_vs_actual,
             "intervention_event_count": 0 if manager is None else len(manager.logs),
+            "initial_anchor_changes": initial_anchor_changes,
         }
         branch_results.append(branch_result)
         branch_records[branch["id"]] = trajectory
@@ -363,7 +397,7 @@ def run() -> dict:
         "elapsed_wall_s": time.perf_counter() - started,
         "created_utc": datetime.now(UTC).isoformat(),
     }
-    reference_path = Path(cfg7["resolved_stage6_artifact"]) / "reference-trajectory.jsonl"
+    reference_path = reference_artifact / "reference-trajectory.jsonl"
     if not reference_path.is_file():
         raise RuntimeError(f"Stage 7 requires Stage 6 reference trajectory: {reference_path}")
     reference_records = [json.loads(line) for line in reference_path.read_text(
@@ -372,12 +406,19 @@ def run() -> dict:
     reference_cost = evaluator.evaluate(
         reference_records, goal_reached=reference_success
     ).to_dict()
+    reference_population_comparable = (
+        int(reference_metadata.get("pedestrian_count", -1)) == pedestrian_count
+    )
     result["stage6_auxiliary_reference"] = {
         "cost": reference_cost,
         "drl_cost": by_branch["original"]["cost"],
-        "delta_j_drl_minus_reference": float(
-            by_branch["original"]["cost"]["total"] - reference_cost["total"]
+        "delta_j_drl_minus_reference": (
+            float(by_branch["original"]["cost"]["total"] - reference_cost["total"])
+            if reference_population_comparable else None
         ),
+        "population_comparable": reference_population_comparable,
+        "reference_pedestrian_count": reference_metadata.get("pedestrian_count"),
+        "stage7_pedestrian_count": pedestrian_count,
         "cost_recomputed_with_current_shared_evaluator": True,
         "primary_counterfactual_baseline": False,
     }
@@ -405,14 +446,22 @@ def run() -> dict:
 
     case1_1_cfg = case_cfg["case_1_1"]
     case1_1 = pair(case1_1_cfg["correct_branch"], case1_1_cfg["error_branch"])
+    gap_metrics = coverage_gap_metrics(
+        branch_records[case1_1_cfg["error_branch"]],
+        branch_ground_truth[case1_1_cfg["error_branch"]],
+        cells=case1_1_cfg["affected_cells"], geometry=cfg7["geometry"],
+    )
     case1_1.update({
         "case_id": "case_1_1_missing_cctv_coverage",
         "information_error": "unobserved_non_cctv_crowd",
         "base_cctv_assumption": "exact_where_installed",
-        "missing_coverage_metrics": coverage_gap_metrics(
-            branch_records[case1_1_cfg["error_branch"]],
-            branch_ground_truth[case1_1_cfg["error_branch"]],
-            cells=case1_1_cfg["affected_cells"], geometry=cfg7["geometry"],
+        "missing_coverage_metrics": gap_metrics,
+        "minimum_peak_underestimation": float(
+            case1_1_cfg["minimum_peak_underestimation"]
+        ),
+        "coverage_gap_treatment_fidelity_passed": bool(
+            gap_metrics["maximum_underestimation"]
+            >= float(case1_1_cfg["minimum_peak_underestimation"])
         ),
         "interpretation": (
             "paired comparison against counterfactual exact coverage in an otherwise non-CCTV cell"
@@ -428,11 +477,38 @@ def run() -> dict:
     )
     case1_2_cfg = case_cfg["case_1_2"]
     case1_2 = pair(case1_2_cfg["correct_branch"], case1_2_cfg["error_branch"])
+    corruption_logs = [
+        item for item in branch_intervention_logs[case1_2_cfg["error_branch"]]
+        if item.get("type") == "coverage_corruption"
+    ]
+    nonzero_truth_logs = [
+        item for item in corruption_logs if float(item.get("ground_truth_count", 0)) > 0
+    ]
+    corruption_metrics = {
+        "sample_count": len(corruption_logs),
+        "nonzero_ground_truth_sample_count": len(nonzero_truth_logs),
+        "maximum_undercount": max((
+            float(item["ground_truth_count"]) - float(item["modified_count"])
+            for item in corruption_logs
+        ), default=0.0),
+        "mean_undercount_when_occupied": (
+            float(np.mean([
+                float(item["ground_truth_count"]) - float(item["modified_count"])
+                for item in nonzero_truth_logs
+            ])) if nonzero_truth_logs else 0.0
+        ),
+    }
     case1_2.update({
         "case_id": "case_1_2_cctv_sensing_error",
-        "information_error": "counterfactual_added_cctv_false_high",
+        "information_error": "counterfactual_added_cctv_false_negative",
         "base_cctv_assumption": "installed_cctv_exact_at_every_tick",
         "counterfactual_sensor_layout_matched": True,
+        "corruption_mode": case1_2_cfg["corruption_mode"],
+        "corruption_metrics": corruption_metrics,
+        "corruption_treatment_fidelity_passed": bool(
+            len(nonzero_truth_logs)
+            >= int(case1_2_cfg["minimum_nonzero_ground_truth_samples"])
+        ),
         "interpretation": (
             "same added-CCTV direct-route cells in both branches; only the "
             "policy-visible count is corrupted in the error branch"
@@ -476,6 +552,17 @@ def run() -> dict:
             branch_records[case2_cfg["direct_only_branch"]],
             branch_records[case2_cfg["error_branch"]], cells=affected_cells,
         ),
+        "minimum_freshness_mediated_l2": float(
+            case2_cfg["minimum_freshness_mediated_l2"]
+        ),
+        "shared_initial_anchor_age_s": float(case2_cfg["initial_anchor_age_s"]),
+        "initial_anchor_changes_by_branch": {
+            identifier: branch_initializations[identifier]
+            for identifier in (
+                case2_cfg["correct_branch"], case2_cfg["direct_only_branch"],
+                case2_cfg["error_branch"],
+            )
+        },
         "correct_branch_validity": freshness_validity_metrics(
             branch_records[case2_cfg["correct_branch"]],
             branch_ground_truth[case2_cfg["correct_branch"]],
@@ -492,6 +579,14 @@ def run() -> dict:
             crowd_clip=float(case_cfg["crowd_clip"]), cells=affected_cells,
         ),
     })
+    case2["freshness_treatment_fidelity_passed"] = bool(
+        case2["freshness_mediated_difference"]["maximum_l2"]
+        >= case2["minimum_freshness_mediated_l2"]
+    )
+    case2["causal_failure_interpretation_supported"] = bool(
+        case2["causal_failure_interpretation_supported"]
+        and case2["freshness_treatment_fidelity_passed"]
+    )
     render_freshness_case_figure(
         ARGS.output / "case-2-intention-freshness-error.png",
         branch_records[case2_cfg["correct_branch"]],
@@ -565,12 +660,17 @@ def run() -> dict:
         "failing_condition": "full_information_input_to_same_frozen_policy",
         "policy_parameters_modified": False,
         "auxiliary_reference": case3_cfg["auxiliary_reference"],
-        "auxiliary_reference_cost": reference_cost,
-        "delta_j_normal_minus_auxiliary_reference": float(
-            by_branch[normal_branch]["cost"]["total"] - reference_cost["total"]
+        "auxiliary_reference_cost": (
+            reference_cost if reference_population_comparable else None
         ),
-        "delta_j_failing_minus_auxiliary_reference": float(
-            by_branch[failing_branch]["cost"]["total"] - reference_cost["total"]
+        "auxiliary_reference_population_comparable": reference_population_comparable,
+        "delta_j_normal_minus_auxiliary_reference": (
+            float(by_branch[normal_branch]["cost"]["total"] - reference_cost["total"])
+            if reference_population_comparable else None
+        ),
+        "delta_j_failing_minus_auxiliary_reference": (
+            float(by_branch[failing_branch]["cost"]["total"] - reference_cost["total"])
+            if reference_population_comparable else None
         ),
         "global_optimality_claimed": False,
     })
