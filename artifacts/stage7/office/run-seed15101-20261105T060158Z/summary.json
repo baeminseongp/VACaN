@@ -1,0 +1,38 @@
+{
+  "status": "pass",
+  "scope": "office_only",
+  "seed": 15101,
+  "run_dir": "/home/engineer/VACaN/artifacts/stage7/office/run-seed15101-20261105T060158Z",
+  "commands": [
+    [
+      "/home/engineer/VACaN/.venv/bin/python",
+      "/home/engineer/VACaN/scripts/analyze_stage7_office_decisions.py",
+      "--config",
+      "/home/engineer/VACaN/configs/stage7/office.yaml",
+      "--output",
+      "/home/engineer/VACaN/artifacts/stage7/office/run-seed15101-20261105T060158Z/decision",
+      "--stage6-artifact",
+      "/home/engineer/VACaN/artifacts/stage6/office-strengthened/matched-seed15101-20261105T052749Z"
+    ],
+    [
+      "/home/engineer/IsaacLab/_isaac_sim/python.sh",
+      "/home/engineer/VACaN/scripts/isaacsim/run_stage7_office.py",
+      "--stage7-config",
+      "/home/engineer/VACaN/configs/stage7/office.yaml",
+      "--config",
+      "/home/engineer/VACaN/configs/stage2/office.yaml",
+      "--output",
+      "/home/engineer/VACaN/artifacts/stage7/office/run-seed15101-20261105T060158Z/episode",
+      "--seed",
+      "15101",
+      "--gpu",
+      "1",
+      "--stage6-artifact",
+      "/home/engineer/VACaN/artifacts/stage6/office-strengthened/matched-seed15101-20261105T052749Z",
+      "--headless",
+      "--record-video"
+    ]
+  ],
+  "video_recording_requested": true,
+  "publication_images_requested": false
+}
